@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 混合变更演示
@@ -14,4 +15,6 @@ struct MixedChangesDiffView: View {
 
 #Preview("混合变更") {
     MixedChangesDiffView()
+        .frame(height: 600)
 }
+#endif

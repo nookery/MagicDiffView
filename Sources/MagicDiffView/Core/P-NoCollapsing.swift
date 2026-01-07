@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 无折叠对比演示
@@ -15,4 +16,6 @@ struct NoCollapsingDiffView: View {
 
 #Preview("无折叠对比") {
     NoCollapsingDiffView()
+        .frame(height: 600)
 }
+#endif

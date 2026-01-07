@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 语言检测和详细日志演示
@@ -15,4 +16,6 @@ struct LanguageDetectionDiffView: View {
 
 #Preview("语言检测") {
     LanguageDetectionDiffView()
+        .frame(height: 600)
 }
+#endif

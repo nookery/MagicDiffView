@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 调试语言检测视图
@@ -110,4 +111,6 @@ extension DebugLanguageDetectionView {
 
 #Preview("调试语言检测") {
     DebugLanguageDetectionView()
+        .frame(height: 600)
 }
+#endif

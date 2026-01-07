@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 动态文本变化演示视图
@@ -93,3 +94,4 @@ extension DynamicTextPreview {
     DynamicTextPreview()
         .frame(height: 600)
 }
+#endif

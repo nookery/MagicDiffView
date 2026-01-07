@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 新增代码演示
@@ -14,4 +15,6 @@ struct AdditionsDiffView: View {
 
 #Preview("新增代码") {
     AdditionsDiffView()
+        .frame(height: 600)
 }
+#endif

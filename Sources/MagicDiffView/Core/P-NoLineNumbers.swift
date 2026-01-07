@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 无行号差异视图演示
@@ -15,4 +16,6 @@ struct NoLineNumbersDiffView: View {
 
 #Preview("无行号差异") {
     NoLineNumbersDiffView()
+        .frame(height: 600)
 }
+#endif

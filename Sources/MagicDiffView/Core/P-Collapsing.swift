@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 折叠功能演示
@@ -16,4 +17,6 @@ struct CollapsingDiffView: View {
 
 #Preview("折叠功能") {
     CollapsingDiffView()
+        .frame(height: 600)
 }
+#endif

@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 主题展示视图
@@ -159,3 +160,4 @@ struct ThemeButton: View {
         .frame(height: 600)
         .frame(width: 600)
 }
+#endif

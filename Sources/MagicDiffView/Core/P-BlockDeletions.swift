@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 代码块删除演示
@@ -14,4 +15,6 @@ struct BlockDeletionsDiffView: View {
 
 #Preview("代码块删除") {
     BlockDeletionsDiffView()
+        .frame(height: 600)
 }
+#endif

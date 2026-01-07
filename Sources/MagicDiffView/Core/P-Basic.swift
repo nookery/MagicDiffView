@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 基础差异视图演示
@@ -16,3 +17,4 @@ struct BasicDiffView: View {
     BasicDiffView()
         .frame(height: 600)
 }
+#endif

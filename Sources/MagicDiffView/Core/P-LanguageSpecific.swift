@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// 指定语言示例演示
@@ -14,4 +15,6 @@ struct LanguageSpecificDiffView: View {
 
 #Preview("指定语言") {
     LanguageSpecificDiffView()
+        .frame(height: 600)
 }
+#endif
