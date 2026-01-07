@@ -156,4 +156,6 @@ struct ThemeButton: View {
 
 #Preview("主题展示") {
     ThemeShowcaseView()
+        .frame(height: 600)
+        .frame(width: 600)
 }

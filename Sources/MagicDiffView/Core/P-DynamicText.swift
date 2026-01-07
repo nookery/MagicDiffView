@@ -91,4 +91,5 @@ extension DynamicTextPreview {
 
 #Preview("动态文本变化") {
     DynamicTextPreview()
+        .frame(height: 600)
 }
