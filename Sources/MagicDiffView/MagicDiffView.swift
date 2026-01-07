@@ -13,6 +13,15 @@ import SwiftUI
 ///     newText: "Hello Swift\nThis is line 2\nNew line 3"
 /// )
 /// ```
+///
+/// 支持主题配置：
+/// ```swift
+/// MagicDiffView(
+///     oldText: oldCode,
+///     newText: newCode,
+///     theme: DiffThemes.github
+/// )
+/// ```
 public struct MagicDiffView: View {
     public nonisolated static let emoji = "🖥️"
 
@@ -25,6 +34,7 @@ public struct MagicDiffView: View {
     let minUnchangedLines: Int
     let verbose: Bool
     let language: CodeLanguage
+    let theme: any DiffTheme
 
     // 状态管理
     @State private var selectedView: MagicDiffViewMode = .diff
@@ -43,6 +53,7 @@ public struct MagicDiffView: View {
     ///   - enableCollapsing: 是否启用折叠功能，默认为 true
     ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
     ///   - verbose: 是否启用详细日志，默认为 false
+    ///   - theme: 主题配置，默认为浅色主题
     public init(
         oldText: String,
         newText: String,
@@ -50,7 +61,8 @@ public struct MagicDiffView: View {
         font: Font = .system(.body, design: .monospaced),
         enableCollapsing: Bool = true,
         minUnchangedLines: Int = 3,
-        verbose: Bool = false
+        verbose: Bool = false,
+        theme: any DiffTheme = DiffThemes.light
     ) {
         if verbose {
             os_log("oldText: \(oldText.count) newText: \(newText.count)")
@@ -63,6 +75,7 @@ public struct MagicDiffView: View {
         self.enableCollapsing = enableCollapsing
         self.minUnchangedLines = minUnchangedLines
         self.verbose = verbose
+        self.theme = theme
         self.language = SyntaxHighlighter.detectLanguage(newText)
 
         if verbose {
@@ -93,7 +106,8 @@ public struct MagicDiffView: View {
                             font: font,
                             selectedLanguage: language,
                             displayMode: .diff,
-                            verbose: verbose
+                            verbose: verbose,
+                            theme: theme
                         )
                     case .original:
                         DiffContentView(
@@ -102,7 +116,8 @@ public struct MagicDiffView: View {
                             font: font,
                             selectedLanguage: language,
                             displayMode: .original,
-                            verbose: verbose
+                            verbose: verbose,
+                            theme: theme
                         )
                     case .modified:
                         DiffContentView(
@@ -111,11 +126,13 @@ public struct MagicDiffView: View {
                             font: font,
                             selectedLanguage: language,
                             displayMode: .modified,
-                            verbose: verbose
+                            verbose: verbose,
+                            theme: theme
                         )
                     }
                 }
             }
+            .background(theme.backgroundColor)
 
             // 浮动提示消息
             MagicDiffCopyToast(copyState: copyState, message: copyMessage)

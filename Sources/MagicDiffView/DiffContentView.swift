@@ -4,13 +4,14 @@ import OSLog
 /// 差异视图的主要内容组件
 struct DiffContentView: View {
     public nonisolated static let emoji = "📋"
-    
+
     let diffItems: [DiffItem]
     let showLineNumbers: Bool
     let font: Font
     let selectedLanguage: CodeLanguage
     let displayMode: MagicDiffViewMode
     let verbose: Bool
+    let theme: any DiffTheme
     
     var body: some View {
         ScrollView {
@@ -43,7 +44,8 @@ struct DiffContentView: View {
             font: font,
             codeLanguage: selectedLanguage,
             displayMode: displayMode,
-            verbose: verbose
+            verbose: verbose,
+            theme: theme
         )
 
         // 根据配置决定是否添加分割线
@@ -53,7 +55,7 @@ struct DiffContentView: View {
                 .overlay(
                     Rectangle()
                         .frame(height: 0.5)  // 分割线高度为 0.5 点
-                        .foregroundColor(Color.secondary.opacity(0.1)),  // 使用半透明的次要颜色
+                        .foregroundColor(theme.separatorColor.opacity(0.3)),  // 使用主题分割线颜色
                     alignment: .bottom  // 对齐到行底部
                 )
         } else {
@@ -69,7 +71,8 @@ struct DiffContentView: View {
             font: font,
             displayMode: displayMode,
             codeLanguage: selectedLanguage,
-            verbose: verbose
+            verbose: verbose,
+            theme: theme
         )
     }
     
@@ -79,7 +82,8 @@ struct DiffContentView: View {
         font: Font = .system(.body, design: .monospaced),
         selectedLanguage: CodeLanguage,
         displayMode: MagicDiffViewMode = .diff,
-        verbose: Bool = false
+        verbose: Bool = false,
+        theme: any DiffTheme = DiffThemes.light
     ) {
         self.diffItems = diffItems
         self.showLineNumbers = showLineNumbers
@@ -87,6 +91,7 @@ struct DiffContentView: View {
         self.selectedLanguage = selectedLanguage
         self.displayMode = displayMode
         self.verbose = verbose
+        self.theme = theme
     }
 }
 

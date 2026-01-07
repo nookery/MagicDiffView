@@ -5,18 +5,31 @@ struct DiffLineNumberView: View {
     let line: DiffLine
     let displayMode: MagicDiffViewMode
     let font: Font
+    let theme: any DiffTheme
+
+    init(
+        line: DiffLine,
+        displayMode: MagicDiffViewMode,
+        font: Font,
+        theme: any DiffTheme = DiffThemes.light
+    ) {
+        self.line = line
+        self.displayMode = displayMode
+        self.font = font
+        self.theme = theme
+    }
 
     var body: some View {
         HStack(spacing: 0) {
             switch displayMode {
             case .diff:
-                lineNumberText(line.oldLineNumber, color: .secondary.opacity(0.8))
+                lineNumberText(line.oldLineNumber, color: theme.lineNumberColor)
                 separatorLine()
-                lineNumberText(line.newLineNumber, color: .secondary.opacity(0.8))
+                lineNumberText(line.newLineNumber, color: theme.lineNumberColor)
             case .original:
-                lineNumberText(line.oldLineNumber, color: .secondary.opacity(0.8))
+                lineNumberText(line.oldLineNumber, color: theme.lineNumberColor)
             case .modified:
-                lineNumberText(line.newLineNumber, color: .secondary.opacity(0.8))
+                lineNumberText(line.newLineNumber, color: theme.lineNumberColor)
             }
         }
         .padding(.horizontal, 0)
@@ -33,7 +46,7 @@ struct DiffLineNumberView: View {
     private func separatorLine() -> some View {
         Rectangle()
             .frame(width: 1)
-            .foregroundColor(Color.secondary.opacity(0.15))
+            .foregroundColor(theme.separatorColor)
     }
 
     /// 生成行号文本视图
@@ -49,13 +62,13 @@ struct DiffLineNumberView: View {
     private var gutterBackgroundColor: Color {
         switch line.type {
         case .added:
-            return Color.green.opacity(0.15)
+            return theme.addedBackground.opacity(0.5) // 行号区域使用更淡的背景色
         case .removed:
-            return Color.red.opacity(0.15)
+            return theme.removedBackground.opacity(0.5)
         case .unchanged:
-            return Color.clear
+            return theme.gutterBackground
         case .modified:
-            return Color.orange.opacity(0.15)
+            return theme.modifiedBackground.opacity(0.5)
         }
     }
 }

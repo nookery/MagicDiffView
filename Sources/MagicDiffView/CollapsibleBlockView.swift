@@ -9,6 +9,7 @@ struct CollapsibleBlockView: View {
     let displayMode: MagicDiffViewMode
     let codeLanguage: CodeLanguage
     let verbose: Bool
+    let theme: any DiffTheme
     
     /// 创建折叠块视图
     /// - Parameters:
@@ -18,13 +19,15 @@ struct CollapsibleBlockView: View {
     ///   - displayMode: 显示模式
     ///   - codeLanguage: 代码语言，用于语法高亮
     ///   - verbose: 是否启用详细日志
+    ///   - theme: 主题配置
     init(
         block: CollapsibleBlock,
         showLineNumbers: Bool,
         font: Font,
         displayMode: MagicDiffViewMode = .diff,
         codeLanguage: CodeLanguage,
-        verbose: Bool
+        verbose: Bool,
+        theme: any DiffTheme = DiffThemes.light
     ) {
         self._block = State(initialValue: block)
         self.showLineNumbers = showLineNumbers
@@ -32,6 +35,7 @@ struct CollapsibleBlockView: View {
         self.displayMode = displayMode
         self.codeLanguage = codeLanguage
         self.verbose = verbose
+        self.theme = theme
     }
     
     var body: some View {
@@ -56,11 +60,11 @@ struct CollapsibleBlockView: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .background(Color.secondary.opacity(0.05))
+        .background(theme.highlightBackground)
         .overlay(
             Rectangle()
                 .frame(height: 0.5)
-                .foregroundColor(Color.secondary.opacity(0.2)),
+                .foregroundColor(theme.separatorColor),
             alignment: .bottom
         )
     }
@@ -79,7 +83,7 @@ struct CollapsibleBlockView: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
-            .background(Color.secondary.opacity(0.05))
+            .background(theme.highlightBackground)
             
             // 展开的行
             ForEach(Array(block.lines.enumerated()), id: \.offset) { index, line in
@@ -89,7 +93,8 @@ struct CollapsibleBlockView: View {
                     font: font,
                     codeLanguage: codeLanguage,
                     displayMode: displayMode,
-                    verbose: verbose
+                    verbose: verbose,
+                    theme: theme
                 )
             }
         }
@@ -101,7 +106,7 @@ struct CollapsibleBlockView: View {
         HStack(alignment: .center, spacing: 0) {
             Image(systemName: "arrow.up.and.down")
                 .font(.system(size: 10))
-                .foregroundColor(.blue)
+                .foregroundColor(theme.lineNumberColor)
         }
         // Width calculation:
         // Diff Mode: 44 (col 1) + 1 (separator) + 44 (col 2) = 89
@@ -109,11 +114,11 @@ struct CollapsibleBlockView: View {
         .frame(minWidth: displayMode == .diff ? 89 : 44)
         .frame(maxHeight: .infinity)
         .padding(.vertical, 1)
-        .background(Color.blue.opacity(0.1))
+        .background(theme.gutterBackground)
         .overlay(
             Rectangle()
                 .frame(width: 1)
-                .foregroundColor(Color.secondary.opacity(0.1)),
+                .foregroundColor(theme.separatorColor),
             alignment: .trailing
         )
     }
@@ -124,16 +129,16 @@ struct CollapsibleBlockView: View {
         HStack(alignment: .center, spacing: 0) {
             Image(systemName: "arrow.up.and.down")
                 .font(.system(size: 10))
-                .foregroundColor(.blue)
+                .foregroundColor(theme.lineNumberColor)
         }
         .frame(minWidth: displayMode == .diff ? 89 : 44)
         .frame(maxHeight: .infinity)
         .padding(.vertical, 1)
-        .background(Color.blue.opacity(0.1))
+        .background(theme.gutterBackground)
         .overlay(
             Rectangle()
                 .frame(width: 1)
-                .foregroundColor(Color.secondary.opacity(0.1)),
+                .foregroundColor(theme.separatorColor),
             alignment: .trailing
         )
     }
@@ -145,10 +150,10 @@ struct CollapsibleBlockView: View {
             if let contextInfo = block.contextInfo {
                 Text(contextInfo)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.lineNumberColor)
                     .padding(.leading, 8)
             }
-            
+
             Spacer()
         }
         .padding(.vertical, 4)
@@ -161,14 +166,14 @@ struct CollapsibleBlockView: View {
             if let contextInfo = block.contextInfo {
                 Text(contextInfo)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.lineNumberColor)
                     .padding(.leading, 8)
             }
-            
+
             Spacer()
         }
         .padding(.vertical, 4)
-        .background(Color(red: 0.96, green: 0.97, blue: 0.99))
+        .background(theme.highlightBackground)
     }
     
     /// 切换折叠状态

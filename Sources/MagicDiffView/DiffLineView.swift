@@ -17,9 +17,30 @@ struct DiffLineView: View {
     let codeLanguage: CodeLanguage
     let displayMode: MagicDiffViewMode
     let verbose: Bool
-    let showIndicator: Bool = false
+    let showIndicator: Bool
+    let theme: any DiffTheme
 
     @State private var isHovered = false
+
+    init(
+        line: DiffLine,
+        showLineNumbers: Bool,
+        font: Font,
+        codeLanguage: CodeLanguage,
+        displayMode: MagicDiffViewMode,
+        verbose: Bool,
+        showIndicator: Bool = false,
+        theme: any DiffTheme = DiffThemes.light
+    ) {
+        self.line = line
+        self.showLineNumbers = showLineNumbers
+        self.font = font
+        self.codeLanguage = codeLanguage
+        self.displayMode = displayMode
+        self.verbose = verbose
+        self.showIndicator = showIndicator
+        self.theme = theme
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -27,7 +48,8 @@ struct DiffLineView: View {
                 DiffLineNumberView(
                     line: line,
                     displayMode: displayMode,
-                    font: font
+                    font: font,
+                    theme: theme
                 )
             }
 
@@ -77,22 +99,22 @@ extension DiffLineView {
                             text: line.content,
                             rules: codeLanguage.rules,
                             highlightRanges: line.highlightRanges,
-                            highlightColor: Color.green.opacity(0.3),
+                            highlightColor: theme.addedHighlightColor,
                             verbose: verbose
                         )
                         .font(font)
-                        .foregroundColor(.black)
+                        .foregroundColor(theme.addedTextColor)
                         .padding(.leading, 4)
                     case .removed:
                         SyntaxHighlighter.highlight(
                             text: line.content,
                             rules: codeLanguage.rules,
                             highlightRanges: line.highlightRanges,
-                            highlightColor: Color.red.opacity(0.3),
+                            highlightColor: theme.removedHighlightColor,
                             verbose: verbose
                         )
                         .font(font)
-                        .foregroundColor(.black)
+                        .foregroundColor(theme.removedTextColor)
                         .padding(.leading, 4)
                     case .unchanged:
                         SyntaxHighlighter.highlight(
@@ -101,7 +123,7 @@ extension DiffLineView {
                             verbose: verbose
                         )
                         .font(font)
-                        .foregroundColor(.primary)
+                        .foregroundColor(theme.unchangedTextColor)
                         .padding(.leading, 4)
                     case .modified:
                         SyntaxHighlighter.highlight(
@@ -110,7 +132,7 @@ extension DiffLineView {
                             verbose: verbose
                         )
                         .font(font)
-                        .foregroundColor(.orange)
+                        .foregroundColor(theme.modifiedTextColor)
                         .padding(.leading, 4)
                     }
                 } else {
@@ -120,7 +142,7 @@ extension DiffLineView {
                         verbose: verbose
                     )
                     .font(font)
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.unchangedTextColor)
                     .padding(.leading, 4)
                 }
             } else {
@@ -138,13 +160,13 @@ extension DiffLineView {
     private var backgroundColor: Color {
         switch line.type {
         case .added:
-            return Color.green.opacity(0.06)
+            return theme.addedBackground
         case .removed:
-            return Color.red.opacity(0.06)
+            return theme.removedBackground
         case .unchanged:
-            return Color.clear
+            return theme.unchangedBackground
         case .modified:
-            return Color.orange.opacity(0.06)
+            return theme.modifiedBackground
         }
     }
 }
