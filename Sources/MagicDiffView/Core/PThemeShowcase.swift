@@ -4,91 +4,10 @@ import SwiftUI
 struct ThemeShowcaseView: View {
     @State private var selectedTheme: any DiffTheme = DiffThemes.light
 
-    let oldCode = """
-    struct User {
-        let id: Int
-        let name: String
-        let email: String
-
-        init(id: Int, name: String, email: String) {
-            self.id = id
-            self.name = name
-            self.email = email
-        }
-    }
-    """
-
-    let newCode = """
-    struct User {
-        let id: Int
-        let name: String
-        let email: String
-        let avatarURL: URL?
-
-        init(id: Int, name: String, email: String, avatarURL: URL? = nil) {
-            self.id = id
-            self.name = name
-            self.email = email
-            self.avatarURL = avatarURL
-        }
-
-        var displayName: String {
-            name.isEmpty ? "Unknown" : name
-        }
-    }
-    """
-
     var body: some View {
         VStack(spacing: 0) {
             // 主题选择器
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ThemeButton(
-                        theme: DiffThemes.light,
-                        isSelected: themeName(selectedTheme) == "Light"
-                    ) {
-                        selectedTheme = DiffThemes.light
-                    }
-
-                    ThemeButton(
-                        theme: DiffThemes.dark,
-                        isSelected: themeName(selectedTheme) == "Dark"
-                    ) {
-                        selectedTheme = DiffThemes.dark
-                    }
-
-                    ThemeButton(
-                        theme: DiffThemes.github,
-                        isSelected: themeName(selectedTheme) == "GitHub"
-                    ) {
-                        selectedTheme = DiffThemes.github
-                    }
-
-                    ThemeButton(
-                        theme: DiffThemes.vscode,
-                        isSelected: themeName(selectedTheme) == "VS Code"
-                    ) {
-                        selectedTheme = DiffThemes.vscode
-                    }
-
-                    ThemeButton(
-                        theme: DiffThemes.highContrast,
-                        isSelected: themeName(selectedTheme) == "High Contrast"
-                    ) {
-                        selectedTheme = DiffThemes.highContrast
-                    }
-
-                    ThemeButton(
-                        theme: DiffThemes.soft,
-                        isSelected: themeName(selectedTheme) == "Soft"
-                    ) {
-                        selectedTheme = DiffThemes.soft
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-            }
-            .background(Color.secondary.opacity(0.1))
+            themeSelectorView
 
             // 差异视图
             MagicDiffView(
@@ -98,7 +17,98 @@ struct ThemeShowcaseView: View {
             )
         }
     }
+}
 
+// MARK: - View
+extension ThemeShowcaseView {
+    /// 主题选择器视图
+    private var themeSelectorView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(allThemes, id: \.name) { theme in
+                    ThemeButton(
+                        theme: theme,
+                        isSelected: isSelectedTheme(theme)
+                    ) {
+                        selectTheme(theme)
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .background(Color.secondary.opacity(0.1))
+    }
+
+    /// 所有可用主题
+    private var allThemes: [any DiffTheme] {
+        [
+            DiffThemes.light,
+            DiffThemes.dark,
+            DiffThemes.github,
+            DiffThemes.vscode,
+            DiffThemes.highContrast,
+            DiffThemes.soft
+        ]
+    }
+
+    /// 演示代码 - 旧版本
+    private var oldCode: String {
+        """
+        struct User {
+            let id: Int
+            let name: String
+            let email: String
+
+            init(id: Int, name: String, email: String) {
+                self.id = id
+                self.name = name
+                self.email = email
+            }
+        }
+        """
+    }
+
+    /// 演示代码 - 新版本
+    private var newCode: String {
+        """
+        struct User {
+            let id: Int
+            let name: String
+            let email: String
+            let avatarURL: URL?
+
+            init(id: Int, name: String, email: String, avatarURL: URL? = nil) {
+                self.id = id
+                self.name = name
+                self.email = email
+                self.avatarURL = avatarURL
+            }
+
+            var displayName: String {
+                name.isEmpty ? "Unknown" : name
+            }
+        }
+        """
+    }
+}
+
+// MARK: - Action
+extension ThemeShowcaseView {
+    /// 选择主题
+    func selectTheme(_ theme: any DiffTheme) {
+        selectedTheme = theme
+    }
+}
+
+// MARK: - Private Helpers
+extension ThemeShowcaseView {
+    /// 检查主题是否被选中
+    private func isSelectedTheme(_ theme: any DiffTheme) -> Bool {
+        themeName(selectedTheme) == theme.name
+    }
+
+    /// 获取主题名称
     private func themeName(_ theme: any DiffTheme) -> String {
         theme.name
     }
@@ -141,6 +151,8 @@ struct ThemeButton: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
+
+// MARK: - Preview
 
 #Preview("主题展示") {
     ThemeShowcaseView()

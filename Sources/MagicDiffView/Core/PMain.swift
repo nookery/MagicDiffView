@@ -106,6 +106,8 @@ struct MagicDiffPreviewView: View {
     }
 }
 
+// MARK: - Preview
+
 #Preview("MagicDiffPreviewView") {
     MagicDiffPreviewView()
 }
