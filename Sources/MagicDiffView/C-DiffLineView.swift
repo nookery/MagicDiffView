@@ -206,4 +206,8 @@ extension DiffLineView {
 
 // MARK: - Preview
 
-// Preview code moved to P-DiffLineViewExamples.swift
+#if DEBUG
+#Preview("DiffLineView Examples") {
+    DiffLineViewExamples()
+}
+#endif

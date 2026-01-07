@@ -1,18 +1,18 @@
-import SwiftUI
 import os
+import SwiftUI
 
 /// 差异视图的工具栏组件
 struct MagicDiffToolbar: View {
     public nonisolated static let emoji = "🔧"
-    
+
     @Binding var selectedView: MagicDiffViewMode
     @Binding var copyState: CopyState
-    
+
     let oldText: String
     let newText: String
     var verbose = false
     var onCopy: (String) -> Void
-    
+
     var body: some View {
         HStack {
             // 左侧：视图切换选择器和语言选择器
@@ -54,7 +54,7 @@ struct MagicDiffToolbar: View {
 
 #Preview {
     MagicDiffToolbar(
-        selectedView: .constant(.diff),        copyState: .constant(.idle),
+        selectedView: .constant(.diff), copyState: .constant(.idle),
         oldText: "Hello World",
         newText: "Hello Swift",
         onCopy: { _ in }
