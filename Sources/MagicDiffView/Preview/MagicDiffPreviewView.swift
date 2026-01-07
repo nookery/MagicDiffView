@@ -1,4 +1,5 @@
 import SwiftUI
+import MagicDiffView
 
 /// MagicDiffView 的预览示例视图
 /// 展示了不同场景下的差异视图效果
@@ -195,8 +196,8 @@ struct DynamicTextPreview: View {
         }
     }
     """
-    
-    return MagicDiffView(
+
+    MagicDiffView(
         oldText: "",
         newText: swiftCode,
         verbose: true

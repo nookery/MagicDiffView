@@ -191,8 +191,3 @@ struct CollapsibleBlockView: View {
     }
 }
 
-// MARK: - Preview
-
-#Preview("MagicDiffPreviewView") {
-    MagicDiffPreviewView()
-}

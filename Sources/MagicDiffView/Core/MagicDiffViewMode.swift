@@ -23,9 +23,3 @@ public enum MagicDiffViewMode: String, CaseIterable {
     }
 }
 
-// MARK: - Preview
-
-#Preview("MagicDiffPreviewView") {
-    MagicDiffPreviewView()
-        
-}

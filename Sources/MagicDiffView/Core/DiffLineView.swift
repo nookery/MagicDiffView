@@ -207,10 +207,6 @@ extension DiffLineView {
 // MARK: - Preview
 
 #if DEBUG
-    #Preview("MagicDiffPreviewView") {
-        MagicDiffPreviewView()
-    }
-
     #Preview("DiffLineView Examples") {
         VStack(alignment: .leading, spacing: 12) {
             let unchanged = DiffLine(

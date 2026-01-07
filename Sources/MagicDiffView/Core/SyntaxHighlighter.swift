@@ -3,7 +3,7 @@ import OSLog
 
 /// 语法高亮器
 /// 提供基本的代码语法高亮功能
-struct SyntaxHighlighter {
+public struct SyntaxHighlighter {
     static let emoji = "📝"
     
     /// 语法高亮规则
@@ -216,7 +216,7 @@ struct SyntaxHighlighter {
     ///   - text: 要检测的代码文本
     ///   - verbose: 是否启用详细日志，默认为 false
     /// - Returns: 推测的语言类型
-    static func detectLanguage(_ text: String, verbose: Bool = false) -> CodeLanguage {
+    public static func detectLanguage(_ text: String, verbose: Bool = false) -> CodeLanguage {
         if verbose {
             os_log("🔍 开始语言检测，文本长度: \(text.count)")
             let preview = String(text.prefix(200))
@@ -375,11 +375,3 @@ public enum CodeLanguage: String, CaseIterable {
     }
 }
 
-// MARK: - Preview
-
-#if DEBUG
-#Preview("MagicDiffPreviewView") {
-    MagicDiffPreviewView()
-        
-}
-#endif

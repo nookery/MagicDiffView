@@ -17,7 +17,13 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MagicDiffView"
+            name: "MagicDiffView",
+            path: "Sources/MagicDiffView/Core"
+        ),
+        .target(
+            name: "MagicDiffViewPreview",
+            dependencies: ["MagicDiffView"],
+            path: "Sources/MagicDiffView/Preview"
         ),
         .testTarget(
             name: "MagicDiffViewTests",

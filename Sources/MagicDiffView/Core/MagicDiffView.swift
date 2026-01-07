@@ -217,11 +217,3 @@ public struct MagicDiffView: View {
     }
 }
 
-// MARK: - Preview
-
-#if DEBUG
-    #Preview("MagicDiffPreviewView") {
-        MagicDiffPreviewView()
-            
-    }
-#endif
