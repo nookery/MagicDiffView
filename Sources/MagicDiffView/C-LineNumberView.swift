@@ -3,13 +3,13 @@ import SwiftUI
 /// 差异视图中的行号区域视图
 struct DiffLineNumberView: View {
     let line: DiffLine
-    let displayMode: MagicDiffViewMode
+    let displayMode: ViewMode
     let font: Font
     let theme: any DiffTheme
 
     init(
         line: DiffLine,
-        displayMode: MagicDiffViewMode,
+        displayMode: ViewMode,
         font: Font,
         theme: any DiffTheme = DiffThemes.light
     ) {

@@ -15,7 +15,7 @@ struct DiffLineView: View {
     let showLineNumbers: Bool
     let font: Font
     let codeLanguage: CodeLanguage
-    let displayMode: MagicDiffViewMode
+    let displayMode: ViewMode
     let verbose: Bool
     let showIndicator: Bool
     let theme: any DiffTheme
@@ -27,7 +27,7 @@ struct DiffLineView: View {
         showLineNumbers: Bool,
         font: Font,
         codeLanguage: CodeLanguage,
-        displayMode: MagicDiffViewMode,
+        displayMode: ViewMode,
         verbose: Bool,
         showIndicator: Bool = false,
         theme: any DiffTheme = DiffThemes.light

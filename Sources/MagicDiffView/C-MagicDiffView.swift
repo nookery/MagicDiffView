@@ -34,11 +34,16 @@ public struct MagicDiffView: View {
     let minUnchangedLines: Int
     let verbose: Bool
     let language: CodeLanguage
-    let theme: any DiffTheme
 
     // 状态管理
-    @State private var selectedView: MagicDiffViewMode = .diff
+    @State private var selectedView: ViewMode = .diff
+    @State private var selectedTheme: ThemePreset
     @State private var isInitialized: Bool = false
+
+    // 当前主题（从 selectedTheme 计算）
+    private var theme: any DiffTheme {
+        selectedTheme.theme
+    }
 
     // 复制状态管理
     @State private var copyState: CopyState = .idle
@@ -53,7 +58,7 @@ public struct MagicDiffView: View {
     ///   - enableCollapsing: 是否启用折叠功能，默认为 true
     ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
     ///   - verbose: 是否启用详细日志，默认为 false
-    ///   - theme: 主题配置，默认为浅色主题
+    ///   - initialTheme: 初始主题，默认为浅色主题
     public init(
         oldText: String,
         newText: String,
@@ -62,7 +67,7 @@ public struct MagicDiffView: View {
         enableCollapsing: Bool = true,
         minUnchangedLines: Int = 3,
         verbose: Bool = false,
-        theme: any DiffTheme = DiffThemes.light
+        initialTheme: ThemePreset = .light
     ) {
         if verbose {
             os_log("oldText: \(oldText.count) newText: \(newText.count)")
@@ -75,8 +80,8 @@ public struct MagicDiffView: View {
         self.enableCollapsing = enableCollapsing
         self.minUnchangedLines = minUnchangedLines
         self.verbose = verbose
-        self.theme = theme
         self.language = SyntaxHighlighter.detectLanguage(newText)
+        self._selectedTheme = State(initialValue: initialTheme)
 
         if verbose {
             os_log("🔍 初始化完成")
@@ -87,8 +92,9 @@ public struct MagicDiffView: View {
         ZStack {
             VStack(spacing: 0) {
                 // 顶部工具栏
-                MagicDiffToolbar(
+                DiffToolbar(
                     selectedView: $selectedView,
+                    selectedTheme: $selectedTheme,
                     copyState: $copyState,
                     oldText: oldText,
                     newText: newText,
@@ -135,7 +141,7 @@ public struct MagicDiffView: View {
             .background(theme.backgroundColor)
 
             // 浮动提示消息
-            MagicDiffCopyToast(copyState: copyState, message: copyMessage)
+            CopyToast(copyState: copyState, message: copyMessage)
         }
     }
 

@@ -228,6 +228,38 @@ public enum DiffThemes {
         addedHighlightColor: Color(hex: "4caf50").opacity(0.4),
         removedHighlightColor: Color(hex: "f44336").opacity(0.4)
     )
+
+    /// 所有可用主题
+    public static let allThemes: [any DiffTheme] = [light, dark, github, vscode, highContrast, soft]
+}
+
+/// 主题选择枚举
+public enum ThemePreset: String, CaseIterable, Identifiable {
+    case light = "Light"
+    case dark = "Dark"
+    case github = "GitHub"
+    case vscode = "VS Code"
+    case highContrast = "High Contrast"
+    case soft = "Soft"
+
+    public var id: String { rawValue }
+
+    /// 获取对应的主题
+    public var theme: any DiffTheme {
+        switch self {
+        case .light: return DiffThemes.light
+        case .dark: return DiffThemes.dark
+        case .github: return DiffThemes.github
+        case .vscode: return DiffThemes.vscode
+        case .highContrast: return DiffThemes.highContrast
+        case .soft: return DiffThemes.soft
+        }
+    }
+
+    /// 显示名称
+    public var displayName: String {
+        rawValue
+    }
 }
 
 // MARK: - Color Extension

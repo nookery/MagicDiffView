@@ -15,7 +15,7 @@ enum CopyState {
 }
 
 /// 复制操作的浮动提示视图
-struct MagicDiffCopyToast: View {
+struct CopyToast: View {
     let copyState: CopyState
     let message: String
     

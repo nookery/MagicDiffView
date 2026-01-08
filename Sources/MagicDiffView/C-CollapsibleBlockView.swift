@@ -6,7 +6,7 @@ struct CollapsibleBlockView: View {
     @State private var block: CollapsibleBlock
     let showLineNumbers: Bool
     let font: Font
-    let displayMode: MagicDiffViewMode
+    let displayMode: ViewMode
     let codeLanguage: CodeLanguage
     let verbose: Bool
     let theme: any DiffTheme
@@ -24,7 +24,7 @@ struct CollapsibleBlockView: View {
         block: CollapsibleBlock,
         showLineNumbers: Bool,
         font: Font,
-        displayMode: MagicDiffViewMode = .diff,
+        displayMode: ViewMode = .diff,
         codeLanguage: CodeLanguage,
         verbose: Bool,
         theme: any DiffTheme = DiffThemes.light

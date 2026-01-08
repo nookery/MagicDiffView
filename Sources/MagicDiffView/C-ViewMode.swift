@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 /// 差异视图的显示模式
-public enum MagicDiffViewMode: String, CaseIterable {
+public enum ViewMode: String, CaseIterable {
     /// 显示差异比较视图
     case diff
     /// 显示原始文本

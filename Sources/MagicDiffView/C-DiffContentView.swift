@@ -9,7 +9,7 @@ struct DiffContentView: View {
     let showLineNumbers: Bool
     let font: Font
     let selectedLanguage: CodeLanguage
-    let displayMode: MagicDiffViewMode
+    let displayMode: ViewMode
     let verbose: Bool
     let theme: any DiffTheme
     
@@ -81,7 +81,7 @@ struct DiffContentView: View {
         showLineNumbers: Bool,
         font: Font = .system(.body, design: .monospaced),
         selectedLanguage: CodeLanguage,
-        displayMode: MagicDiffViewMode = .diff,
+        displayMode: ViewMode = .diff,
         verbose: Bool = false,
         theme: any DiffTheme = DiffThemes.light
     ) {
