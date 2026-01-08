@@ -137,8 +137,8 @@ public struct MagicDiffView: View {
                         )
                     }
                 }
+                .background(theme.backgroundColor)
             }
-            .background(theme.backgroundColor)
 
             // 浮动提示消息
             CopyToast(copyState: copyState, message: copyMessage)
