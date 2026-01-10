@@ -1,506 +1,1048 @@
 import SwiftUI
 
-/// 综合演示视图 - 展示所有演示文件
-public struct ComprehensiveDemoView: View {
-    @StateObject private var dataManager = DemoDataManager.shared
-    @State private var selectedLanguage: DemoCodeLanguage?
-    @State private var selectedDemoFile: DemoFile?
-    @State private var searchText: String = ""
-    @State private var showStatistics = false
+/// 综合演示视图 - 展示所有编程语言示例
+struct ComprehensiveDemoView: View {
+    @State private var selectedDemo: DemoFile?
 
-    public init() {}
-
-    public var body: some View {
+    var body: some View {
         NavigationSplitView {
-            // 侧边栏：文件浏览器
-            sidebar
+            // 左侧：所有示例文件列表
+            List {
+                ForEach(demoFiles) { demo in
+                    Button(action: {
+                        selectedDemo = demo
+                    }) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "doc.fill")
+                                    .foregroundStyle(Color.accentColor)
+                                Text(demo.name)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+                                Text("(\(demo.language.rawValue))")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                if selectedDemo?.id == demo.id {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.accentColor)
+                                }
+                            }
+
+                            Text(demo.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .navigationTitle("演示示例")
         } detail: {
-            // 主内容区域
-            contentView
-        }
-        .navigationTitle("MagicDiffView 演示")
-    }
-
-    // MARK: - 侧边栏
-
-    private var sidebar: some View {
-        VStack(spacing: 0) {
-            // 搜索栏
-            searchBar
-
-            // 语言过滤器
-            languageFilter
-
-            // 文件列表
-            if filteredFiles.isEmpty {
-                emptyState
-            } else {
-                fileList
-            }
-
-            // 统计信息按钮
-            statisticsButton
-        }
-        .navigationTitle("演示文件")
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Menu {
-                    Button("全部展开") {
-                        // 可以添加展开全部的逻辑
+            // 右侧：差异视图
+            if let demo = selectedDemo {
+                VStack(spacing: 0) {
+                    // 文件信息
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(demo.name)
+                                .font(.headline)
+                            Text("\(demo.language.rawValue) - \(demo.description)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
                     }
-                    Button("全部折叠") {
-                        // 可以添加折叠全部的逻辑
-                    }
-                    Divider()
-                    Button("显示统计") {
-                        showStatistics = true
-                    }
-                } label: {
-                    Label("选项", systemImage: "ellipsis.circle")
-                }
-            }
-        }
-    }
+                    .padding()
+                    .background(Color(.controlBackgroundColor))
 
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-
-            TextField("搜索演示文件", text: $searchText)
-                .textFieldStyle(.plain)
-
-            if !searchText.isEmpty {
-                Button(action: { searchText = "" }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(8)
-        .background(Color(.controlBackgroundColor))
-    }
-
-    private var languageFilter: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                LanguageFilterButton(
-                    language: nil,
-                    isSelected: selectedLanguage == nil,
-                    action: { selectedLanguage = nil }
-                )
-
-                ForEach(dataManager.availableLanguages, id: \.self) { language in
-                    LanguageFilterButton(
-                        language: language,
-                        isSelected: selectedLanguage == language,
-                        action: { selectedLanguage = language }
+                    // 差异视图
+                    MagicDiffView(
+                        oldText: demo.beforeContent,
+                        newText: demo.afterContent,
+                        showLineNumbers: true,
+                        font: .system(.body, design: .monospaced),
+                        enableCollapsing: true,
+                        minUnchangedLines: 3,
+                        verbose: false,
+                        initialTheme: .auto
                     )
                 }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
-        }
-        .background(Color(.controlBackgroundColor))
-    }
-
-    private var fileList: some View {
-        List(filteredFiles, selection: $selectedDemoFile) { file in
-            FileRow(file: file)
-                .tag(file)
-                .listRowBackground(
-                    selectedDemoFile?.id == file.id
-                        ? Color.accentColor.opacity(0.1)
-                        : Color.clear
-                )
-        }
-        .listStyle(.sidebar)
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-
-            Text("未找到匹配的文件")
-                .font(.headline)
-
-            Text("尝试调整搜索词或筛选条件")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var statisticsButton: some View {
-        Button(action: { showStatistics = true }) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("演示文件")
-                        .font(.caption)
-                    Text("\(dataManager.statistics.totalFiles) 个文件")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chart.bar.fill")
-                    .font(.caption)
-            }
-            .padding()
-            .background(Color(.controlBackgroundColor))
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - 内容视图
-
-    private var contentView: some View {
-        Group {
-            if let file = selectedDemoFile {
-                demoDetailView(for: file)
             } else {
-                welcomeView
-            }
-        }
-        .sheet(isPresented: $showStatistics) {
-            StatisticsView()
-        }
-    }
+                // 欢迎界面
+                VStack(spacing: 24) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 64))
+                        .foregroundStyle(Color.accentColor)
 
-    private func demoDetailView(for file: DemoFile) -> some View {
-        VStack(spacing: 0) {
-            // 文件信息头部
-            fileHeader(file)
+                    Text("选择一个示例开始")
+                        .font(.title2)
 
-            // Diff 视图（自带工具栏和视图模式切换）
-            MagicDiffView(
-                oldText: file.beforeContent,
-                newText: file.afterContent,
-                showLineNumbers: true,
-                font: .system(.body, design: .monospaced),
-                enableCollapsing: true,
-                minUnchangedLines: 3,
-                verbose: false,
-                initialTheme: .auto
-            )
-        }
-    }
-
-    private func fileHeader(_ file: DemoFile) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: file.language.icon)
-                    .font(.title2)
-                    .foregroundStyle(Color.accentColor)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(file.name)
-                        .font(.headline)
-
-                    Text(file.language.rawValue)
-                        .font(.caption)
+                    Text("从左侧列表中选择一个编程语言示例\n查看代码差异对比")
+                        .font(.body)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-
-                Spacer()
-            }
-
-            Text(file.description)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(Color(.controlBackgroundColor))
-    }
-
-    private var welcomeView: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "doc.on.doc")
-                .font(.system(size: 64))
-                .foregroundStyle(Color.accentColor)
-
-            VStack(spacing: 8) {
-                Text("欢迎使用 MagicDiffView")
-                    .font(.title)
-
-                Text("从左侧选择一个演示文件开始查看")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                FeatureRow(
-                    icon: "square.split.2x2",
-                    title: "并排视图",
-                    description: "左右对比旧版本和新版本代码"
-                )
-
-                FeatureRow(
-                    icon: "text.alignleft",
-                    title: "统一差异",
-                    description: "经典的 Git 风格差异视图"
-                )
-
-                FeatureRow(
-                    icon: "paintbrush",
-                    title: "主题切换",
-                    description: "支持自动、浅色、深色主题"
-                )
-
-                FeatureRow(
-                    icon: "chevron.compact.up",
-                    title: "代码折叠",
-                    description: "自动折叠未变更的代码块"
-                )
-
-                FeatureRow(
-                    icon: "arrow.triangle.2.circlepath",
-                    title: "Myers 算法",
-                    description: "业界标准的差异计算算法"
-                )
-            }
-            .padding()
-            .background(Color(.controlBackgroundColor))
-            .cornerRadius(12)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: - 计算属性
-
-    private var filteredFiles: [DemoFile] {
-        var files = dataManager.demoFiles
-
-        // 语言筛选
-        if let language = selectedLanguage {
-            files = files.filter { $0.language == language }
-        }
-
-        // 搜索筛选
-        if !searchText.isEmpty {
-            files = dataManager.searchFiles(query: searchText)
-            // 再次应用语言筛选
-            if let language = selectedLanguage {
-                files = files.filter { $0.language == language }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-
-        return files
     }
 }
 
-// MARK: - 文件行视图
+// MARK: - Demo Data
 
-struct FileRow: View {
-    let file: DemoFile
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: file.language.icon)
-                .font(.title3)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(file.name)
-                    .font(.body)
-
-                Text(file.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            Text(file.language.rawValue)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - 语言过滤器按钮
-
-struct LanguageFilterButton: View {
-    let language: DemoCodeLanguage?
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(language?.rawValue ?? "全部")
-                .font(.caption)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isSelected ? Color.accentColor : Color(.controlBackgroundColor))
-                .foregroundStyle(isSelected ? .white : .primary)
-                .cornerRadius(12)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - 功能行
-
-struct FeatureRow: View {
-    let icon: String
-    let title: String
+struct DemoFile: Identifiable, Hashable {
+    let id = UUID()
+    let language: CodeLanguage
+    let name: String
     let description: String
+    let beforeContent: String
+    let afterContent: String
 
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 28)
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-
-                Text(description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-        }
+    static func == (lhs: DemoFile, rhs: DemoFile) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
-// MARK: - 统计视图
+/// 所有演示文件
+let demoFiles: [DemoFile] = [
+    // Swift 示例
+    DemoFile(
+        language: .swift,
+        name: "UserModel",
+        description: "用户模型重构：添加年龄、头像、日期等字段，增强验证和工具方法",
+        beforeContent: swiftUserModelBefore,
+        afterContent: swiftUserModelAfter
+    ),
 
-struct StatisticsView: View {
-    @Environment(\.dismiss) private var dismiss
-    @StateObject private var dataManager = DemoDataManager.shared
+    // JavaScript 示例
+    DemoFile(
+        language: .javascript,
+        name: "APIService",
+        description: "API 服务增强：添加重试机制、错误处理、多种 HTTP 方法支持",
+        beforeContent: jsAPIServiceBefore,
+        afterContent: jsAPIServiceAfter
+    ),
 
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                // 总览卡片
-                OverviewCard(
-                    totalFiles: dataManager.statistics.totalFiles,
-                    totalLines: dataManager.statistics.totalLines
-                )
+    // Python 示例
+    DemoFile(
+        language: .python,
+        name: "UserModel",
+        description: "用户模型升级：使用 dataclass，添加验证、查询方法和数据序列化",
+        beforeContent: pythonUserModelBefore,
+        afterContent: pythonUserModelAfter
+    ),
 
-                // 语言分布
-                LanguageDistribution(languageCounts: dataManager.statistics.languageCounts)
+    // Java 示例
+    DemoFile(
+        language: .java,
+        name: "UserModel",
+        description: "用户模型完善：添加可选字段、邮箱验证、流式处理和工厂方法",
+        beforeContent: javaUserModelBefore,
+        afterContent: javaUserModelAfter
+    ),
 
-                Spacer()
+    // Kotlin 示例
+    DemoFile(
+        language: .plainText,
+        name: "UserModel",
+        description: "用户模型增强：利用 Kotlin 特性，添加不可变性、扩展函数和集合操作",
+        beforeContent: kotlinUserModelBefore,
+        afterContent: kotlinUserModelAfter
+    ),
+
+    // Go 示例
+    DemoFile(
+        language: .plainText,
+        name: "UserModel",
+        description: "用户模型扩展：添加可选字段、正则验证、排序和查询方法",
+        beforeContent: goUserModelBefore,
+        afterContent: goUserModelAfter
+    ),
+
+    // Rust 示例
+    DemoFile(
+        language: .plainText,
+        name: "UserModel",
+        description: "用户模型改进：利用所有权系统、Option 类型和迭代器",
+        beforeContent: rustUserModelBefore,
+        afterContent: rustUserModelAfter
+    ),
+]
+
+// MARK: - Demo Content
+
+let swiftUserModelBefore =
+"""
+import Foundation
+
+struct User {
+    let id: Int
+    let name: String
+    let email: String
+
+    init(id: Int, name: String, email: String) {
+        self.id = id
+        self.name = name
+        self.email = email
+    }
+
+    func validate() -> Bool {
+        return !name.isEmpty && !email.isEmpty
+    }
+
+    func description() -> String {
+        return "User(\\(id)): \\(name) <\\(email)>"
+    }
+}
+
+class UserManager {
+    var users: [User] = []
+
+    func addUser(_ user: User) {
+        users.append(user)
+    }
+
+    func findUser(id: Int) -> User? {
+        return users.first { $0.id == id }
+    }
+
+    func removeUser(id: Int) -> Bool {
+        let initialCount = users.count
+        users.removeAll { $0.id == id }
+        return users.count < initialCount
+    }
+}
+"""
+
+let swiftUserModelAfter =
+"""
+import Foundation
+
+struct User {
+    let id: Int
+    let name: String
+    let email: String
+    let age: Int?
+    let avatarURL: URL?
+    let createdAt: Date
+
+    init(
+        id: Int,
+        name: String,
+        email: String,
+        age: Int? = nil,
+        avatarURL: URL? = nil,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.age = age
+        self.avatarURL = avatarURL
+        self.createdAt = createdAt
+    }
+
+    func validate() -> Bool {
+        guard !name.isEmpty else { return false }
+        guard !email.isEmpty else { return false }
+        guard email.contains("@") && email.contains(".") else { return false }
+        guard let age = age else { return true }
+        return age >= 13 && age <= 120
+    }
+
+    func description() -> String {
+        var info = "User(\\(id)): \\(name) <\\(email)>"
+        if let age = age {
+            info += " [\\(age)岁]"
+        }
+        return info
+    }
+
+    var displayName: String {
+        name.isEmpty ? "Unknown" : name
+    }
+
+    var initials: String {
+        let components = name.components(separatedBy: " ")
+        return components.compactMap { $0.first }.uppercased().joined()
+    }
+}
+
+class UserManager {
+    private(set) var users: [User] = []
+    private var nextID: Int = 1
+
+    func addUser(_ user: User) -> Bool {
+        guard !users.contains(where: { $0.email == user.email }) else {
+            return false
+        }
+        users.append(user)
+        return true
+    }
+
+    func findUser(id: Int) -> User? {
+        return users.first { $0.id == id }
+    }
+
+    func findUser(email: String) -> User? {
+        return users.first { $0.email == email }
+    }
+
+    func removeUser(id: Int) -> Bool {
+        let index = users.firstIndex { $0.id == id }
+        guard let index = index else { return false }
+        users.remove(at: index)
+        return true
+    }
+
+    func updateUser(id: Int, name: String? = nil, email: String? = nil) -> Bool {
+        guard let index = users.firstIndex(where: { $0.id == id }) else {
+            return false
+        }
+        if let name = name {
+            users[index].name = name
+        }
+        if let email = email {
+            users[index].email = email
+        }
+        return true
+    }
+
+    var sortedUsers: [User] {
+        return users.sorted { $0.name < $1.name }
+    }
+
+    var adultUsers: [User] {
+        return users.filter { $0.age ?? 0 >= 18 }
+    }
+
+    func totalCount() -> Int {
+        return users.count
+    }
+}
+"""
+
+let jsAPIServiceBefore =
+"""
+// API 服务类
+class APIService {
+    constructor(baseUrl) {
+        this.baseUrl = baseUrl;
+        this.timeout = 5000;
+    }
+
+    async fetchData(endpoint) {
+        const url = `${this.baseUrl}${endpoint}`;
+        const options = {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
             }
-            .padding()
-            .navigationTitle("统计信息")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("完成") { dismiss() }
+        };
+
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Fetch error:', error);
+            throw error;
+        }
+    }
+
+    async postData(endpoint, data) {
+        const url = `${this.baseUrl}${endpoint}`;
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        };
+
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Post error:', error);
+            throw error;
+        }
+    }
+}
+"""
+
+let jsAPIServiceAfter =
+"""
+// API 服务类 - 增强版
+class APIService {
+    constructor(baseUrl, options = {}) {
+        this.baseUrl = baseUrl;
+        this.timeout = options.timeout || 5000;
+        this.headers = options.headers || {};
+        this.enableRetry = options.enableRetry ?? true;
+        this.maxRetries = options.maxRetries || 3;
+        this.retryDelay = options.retryDelay || 1000;
+    }
+
+    async fetchData(endpoint, options = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        const requestOptions = {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this.headers,
+                ...options.headers
+            },
+            ...options
+        };
+
+        try {
+            const response = await this._executeWithRetry(
+                () => fetch(url, requestOptions),
+                endpoint
+            );
+
+            if (!response.ok) {
+                throw new APIError(
+                    `HTTP error! status: ${response.status}`,
+                    response.status,
+                    endpoint
+                );
+            }
+
+            const data = await response.json();
+            this._logSuccess('GET', endpoint, response.status);
+            return data;
+        } catch (error) {
+            this._logError('Fetch error', endpoint, error);
+            throw error;
+        }
+    }
+
+    async _executeWithRetry(requestFn, endpoint) {
+        let lastError;
+
+        for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+            try {
+                return await requestFn();
+            } catch (error) {
+                lastError = error;
+
+                if (!this.enableRetry || attempt === this.maxRetries) {
+                    throw error;
                 }
+
+                console.warn(`Attempt ${attempt + 1} failed, retrying...`);
+                await this._delay(this.retryDelay * (attempt + 1));
             }
         }
-        .frame(width: 400, height: 500)
+
+        throw lastError;
+    }
+
+    _delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    _logSuccess(method, endpoint, status) {
+        console.log(`✓ ${method} ${endpoint} - ${status}`);
+    }
+
+    _logError(message, endpoint, error) {
+        console.error(`✗ ${message}: ${endpoint}`, error);
+    }
+
+    setAuthToken(token) {
+        this.headers['Authorization'] = `Bearer ${token}`;
     }
 }
 
-struct OverviewCard: View {
-    let totalFiles: Int
-    let totalLines: Int
+class APIError extends Error {
+    constructor(message, status, endpoint) {
+        super(message);
+        this.name = 'APIError';
+        this.status = status;
+        this.endpoint = endpoint;
+    }
+}
+"""
 
-    var body: some View {
-        HStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(totalFiles)")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(Color.accentColor)
+let pythonUserModelBefore =
+"""
+from typing import List, Optional
 
-                Text("演示文件")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
 
-            Divider()
-                .frame(height: 50)
+class User:
+    def __init__(self, user_id: int, name: str, email: str):
+        self.id = user_id
+        self.name = name
+        self.email = email
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(totalLines)")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(Color.accentColor)
+    def validate(self) -> bool:
+        return bool(self.name and self.email)
 
-                Text("总代码行数")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+    def __str__(self) -> str:
+        return f"User({self.id}): {self.name} <{self.email}>"
 
-            Spacer()
-        }
-        .padding()
-        .background(Color(.controlBackgroundColor))
-        .cornerRadius(12)
+
+class UserManager:
+    def __init__(self):
+        self.users: List[User] = []
+
+    def add_user(self, user: User) -> None:
+        self.users.append(user)
+
+    def find_user(self, user_id: int) -> Optional[User]:
+        for user in self.users:
+            if user.id == user_id:
+                return user
+        return None
+
+    def remove_user(self, user_id: int) -> bool:
+        initial_count = len(self.users)
+        self.users = [u for u in self.users if u.id != user_id]
+        return len(self.users) < initial_count
+"""
+
+let pythonUserModelAfter =
+"""
+from typing import List, Optional
+from datetime import datetime
+from dataclasses import dataclass, field
+import re
+
+
+@dataclass
+class User:
+    id: int
+    name: str
+    email: str
+    age: Optional[int] = None
+    avatar_url: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.now)
+
+    def validate(self) -> bool:
+        if not self.name or not self.name.strip():
+            return False
+        if not self.email or not self.email.strip():
+            return False
+
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, self.email):
+            return False
+
+        if self.age is not None and (self.age < 13 or self.age > 120):
+            return False
+
+        return True
+
+    @property
+    def display_name(self) -> str:
+        return self.name if self.name else "Unknown"
+
+    @property
+    def initials(self) -> str:
+        return ''.join(
+            word[0].upper()
+            for word in self.name.split()
+            if word
+        )
+
+
+class UserManager:
+    def __init__(self):
+        self.users: List[User] = []
+        self._next_id: int = 1
+
+    def add_user(self, user: User) -> bool:
+        if any(u.email == user.email for u in self.users):
+            return False
+        self.users.append(user)
+        return True
+
+    def find_user_by_email(self, email: str) -> Optional[User]:
+        return next((u for u in self.users if u.email == email), None)
+
+    def update_user(
+        self,
+        user_id: int,
+        name: Optional[str] = None,
+        email: Optional[str] = None
+    ) -> bool:
+        user = self.find_user(user_id)
+        if not user:
+            return False
+
+        if name is not None:
+            user.name = name
+        if email is not None:
+            user.email = email
+
+        return True
+
+    @property
+    def sorted_users(self) -> List[User]:
+        return sorted(self.users, key=lambda u: u.name)
+
+    @property
+    def adult_users(self) -> List[User]:
+        return [u for u in self.users if u.age is not None and u.age >= 18]
+"""
+
+let javaUserModelBefore =
+"""
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class User {
+    private int id;
+    private String name;
+    private String email;
+
+    public User(int id, String name, String email) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+    }
+
+    public boolean validate() {
+        return name != null && !name.isEmpty()
+                && email != null && !email.isEmpty();
     }
 }
 
-struct LanguageDistribution: View {
-    let languageCounts: [DemoCodeLanguage: Int]
+class UserManager {
+    private List<User> users = new ArrayList<>();
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("语言分布")
-                .font(.headline)
+    public void addUser(User user) {
+        users.add(user);
+    }
 
-            ForEach(Array(languageCounts.keys.sorted(by: { $0.rawValue < $1.rawValue })), id: \.self) { language in
-                if let count = languageCounts[language] {
-                    LanguageBar(language: language, count: count)
-                }
-            }
+    public Optional<User> findUser(int id) {
+        return users.stream()
+                .filter(u -> u.getId() == id)
+                .findFirst();
+    }
+
+    public boolean removeUser(int id) {
+        int initialSize = users.size();
+        users.removeIf(u -> u.getId() == id);
+        return users.size() < initialSize;
+    }
+}
+"""
+
+let javaUserModelAfter =
+"""
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+public class User {
+    private int id;
+    private String name;
+    private String email;
+    private Integer age;
+
+    public boolean validate() {
+        if (name == null || name.trim().isEmpty()) {
+            return false;
         }
-        .padding()
-        .background(Color(.controlBackgroundColor))
-        .cornerRadius(12)
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+
+        String emailPattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$";
+        if (!email.matches(emailPattern)) {
+            return false;
+        }
+
+        if (age != null && (age < 13 || age > 120)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public String getDisplayName() {
+        return (name != null && !name.isEmpty()) ? name : "Unknown";
     }
 }
 
-struct LanguageBar: View {
-    let language: DemoCodeLanguage
-    let count: Int
+class UserManager {
+    private final List<User> users = new ArrayList<>();
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Image(systemName: language.icon)
-                    .font(.caption)
-                Text(language.rawValue)
-                    .font(.caption)
-                Spacer()
-                Text("\(count) 个文件")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    public boolean addUser(User user) {
+        if (users.stream().anyMatch(u -> u.getEmail().equals(user.getEmail()))) {
+            return false;
+        }
+        users.add(user);
+        return true;
+    }
+
+    public Optional<User> findUserByEmail(String email) {
+        return users.stream()
+                .filter(u -> u.getEmail().equals(email))
+                .findFirst();
+    }
+
+    public List<User> getSortedUsers() {
+        return users.stream()
+                .sorted((u1, u2) -> u1.getName().compareTo(u2.getName()))
+                .collect(Collectors.toList());
+    }
+
+    public List<User> getAdultUsers() {
+        return users.stream()
+                .filter(u -> u.getAge() != null && u.getAge() >= 18)
+                .collect(Collectors.toList());
+    }
+}
+"""
+
+let kotlinUserModelBefore =
+"""
+data class User(
+    val id: Int,
+    val name: String,
+    val email: String
+) {
+    fun validate(): Boolean {
+        return name.isNotEmpty() && email.isNotEmpty()
+    }
+}
+
+class UserManager {
+    private val users: MutableList<User> = mutableListOf()
+
+    fun addUser(user: User) {
+        users.add(user)
+    }
+
+    fun findUser(id: Int): User? {
+        return users.find { it.id == id }
+    }
+
+    fun removeUser(id: Int): Boolean {
+        val initialSize = users.size
+        users.removeAll { it.id == id }
+        return users.size < initialSize
+    }
+}
+"""
+
+let kotlinUserModelAfter =
+"""
+import java.time.LocalDateTime
+
+data class User(
+    val id: Int,
+    val name: String,
+    val email: String,
+    val age: Int? = null,
+    val avatarUrl: String? = null,
+    val createdAt: LocalDateTime = LocalDateTime.now()
+) {
+    fun validate(): Boolean {
+        if (name.isBlank()) return false
+        if (email.isBlank()) return false
+
+        val emailPattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$"
+        if (!email.matches(emailPattern.toRegex())) return false
+
+        if (age != null && (age < 13 || age > 120)) return false
+
+        return true
+    }
+
+    val displayName: String
+        get() = name.ifBlank { "Unknown" }
+
+    val initials: String
+        get() = name
+            .split(" ")
+            .filter { it.isNotEmpty() }
+            .map { it.first().uppercaseChar() }
+            .joinToString("")
+}
+
+class UserManager {
+    private val users: MutableList<User> = mutableListOf()
+
+    fun addUser(user: User): Boolean {
+        if (users.any { it.email == user.email }) {
+            return false
+        }
+        users.add(user)
+        return true
+    }
+
+    val sortedUsers: List<User>
+        get() = users.sortedBy { it.name }
+
+    val adultUsers: List<User>
+        get() = users.filter { it.age != null && it.age!! >= 18 }
+}
+"""
+
+let goUserModelBefore =
+"""
+package main
+
+import "fmt"
+
+type User struct {
+    ID    int
+    Name  string
+    Email string
+}
+
+func (u *User) Validate() bool {
+    return u.Name != "" && u.Email != ""
+}
+
+type UserManager struct {
+    users []User
+}
+
+func (m *UserManager) AddUser(user User) {
+    m.users = append(m.users, user)
+}
+
+func (m *UserManager) FindUser(id int) *User {
+    for i := range m.users {
+        if m.users[i].ID == id {
+            return &m.users[i]
+        }
+    }
+    return nil
+}
+"""
+
+let goUserModelAfter =
+"""
+package main
+
+import (
+    "fmt"
+    "regexp"
+    "sort"
+    "strings"
+)
+
+type User struct {
+    ID        int
+    Name      string
+    Email     string
+    Age       *int
+    AvatarURL *string
+}
+
+var emailPattern = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\\\.[a-zA-Z]{2,}$`)
+
+func (u *User) Validate() bool {
+    if strings.TrimSpace(u.Name) == "" {
+        return false
+    }
+    if !emailPattern.MatchString(u.Email) {
+        return false
+    }
+    if u.Age != nil && (*u.Age < 13 || *u.Age > 120) {
+        return false
+    }
+    return true
+}
+
+func (u *User) DisplayName() string {
+    if u.Name == "" {
+        return "Unknown"
+    }
+    return u.Name
+}
+
+type UserManager struct {
+    users   []User
+    nextID  int
+}
+
+func (m *UserManager) AddUser(user User) bool {
+    for _, existingUser := range m.users {
+        if existingUser.Email == user.Email {
+            return false
+        }
+    }
+    m.users = append(m.users, user)
+    return true
+}
+
+func (m *UserManager) SortedUsers() []User {
+    sorted := make([]User, len(m.users))
+    copy(sorted, m.users)
+
+    sort.Slice(sorted, func(i, j int) bool {
+        return sorted[i].Name < sorted[j].Name
+    })
+
+    return sorted
+}
+
+func (m *UserManager) AdultUsers() []User {
+    var adults []User
+    for _, user := range m.users {
+        if user.Age != nil && *user.Age >= 18 {
+            adults = append(adults, user)
+        }
+    }
+    return adults
+}
+"""
+
+let rustUserModelBefore =
+"""
+use std::fmt;
+
+#[derive(Debug, Clone)]
+pub struct User {
+    pub id: i32,
+    pub name: String,
+    pub email: String,
+}
+
+impl User {
+    pub fn validate(&self) -> bool {
+        !self.name.is_empty() && !self.email.is_empty()
+    }
+}
+
+pub struct UserManager {
+    users: Vec<User>,
+}
+
+impl UserManager {
+    pub fn new() -> Self {
+        UserManager { users: Vec::new() }
+    }
+
+    pub fn add_user(&mut self, user: User) {
+        self.users.push(user);
+    }
+
+    pub fn find_user(&self, id: i32) -> Option<&User> {
+        self.users.iter().find(|u| u.id == id)
+    }
+
+    pub fn remove_user(&mut self, id: i32) -> bool {
+        let initial_len = self.users.len();
+        self.users.retain(|u| u.id != id);
+        self.users.len() < initial_len
+    }
+}
+"""
+
+let rustUserModelAfter =
+"""
+use std::collections::HashMap;
+use regex::Regex;
+
+#[derive(Debug, Clone)]
+pub struct User {
+    pub id: i32,
+    pub name: String,
+    pub email: String,
+    pub age: Option<i32>,
+    pub avatar_url: Option<String>,
+}
+
+impl User {
+    pub fn validate(&self) -> bool {
+        if self.name.trim().is_empty() {
+            return false;
+        }
+        if self.email.trim().is_empty() {
+            return false;
+        }
+
+        let email_regex = Regex::new(
+            r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+        ).unwrap();
+
+        if !email_regex.is_match(&self.email) {
+            return false;
+        }
+
+        if let Some(age) = self.age {
+            if age < 13 || age > 120 {
+                return false;
             }
+        }
 
-            GeometryReader { geometry in
-                HStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Color.accentColor)
-                        .frame(width: geometry.size.width * 0.7)
+        true
+    }
 
-                    Rectangle()
-                        .fill(Color(.separatorColor))
-                        .frame(width: geometry.size.width * 0.3)
-                }
-            }
-            .frame(height: 4)
-            .cornerRadius(2)
+    pub fn display_name(&self) -> String {
+        if self.name.is_empty() {
+            "Unknown".to_string()
+        } else {
+            self.name.clone()
         }
     }
 }
 
-// MARK: - 预览
+pub struct UserManager {
+    users: Vec<User>,
+    next_id: i32,
+}
 
-#Preview {
+impl UserManager {
+    pub fn new() -> Self {
+        UserManager {
+            users: Vec::new(),
+            next_id: 1,
+        }
+    }
+
+    pub fn add_user(&mut self, user: User) -> bool {
+        if self.users.iter().any(|u| u.email == user.email) {
+            return false;
+        }
+
+        self.users.push(user);
+        true
+    }
+
+    pub fn sorted_users(&self) -> Vec<&User> {
+        let mut sorted = self.users.iter().collect::<Vec<_>>();
+        sorted.sort_by(|a, b| a.name.cmp(&b.name));
+        sorted
+    }
+
+    pub fn adult_users(&self) -> Vec<&User> {
+        self.users
+            .iter()
+            .filter(|u| u.age.map_or(false, |age| age >= 18))
+            .collect()
+    }
+}
+"""
+
+// MARK: - Preview
+
+#Preview("综合演示") {
     ComprehensiveDemoView()
+        .frame(minWidth: 1000, minHeight: 600)
 }

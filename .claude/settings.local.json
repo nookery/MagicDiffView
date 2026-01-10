@@ -12,7 +12,8 @@
       "mcp__web-reader__webReader",
       "mcp__web-search-prime__webSearchPrime",
       "Bash(grep:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(ls:*)"
     ]
   }
 }
