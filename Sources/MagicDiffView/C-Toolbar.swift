@@ -56,7 +56,7 @@ struct DiffToolbar: View {
             Spacer()
 
             // 右侧：复制按钮（仅在文本视图时显示）
-            if selectedView != .diff {
+            if !selectedView.isComparisonMode {
                 MagicDiffCopyButton(
                     copyState: copyState,
                     action: {

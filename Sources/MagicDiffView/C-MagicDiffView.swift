@@ -129,6 +129,15 @@ public struct MagicDiffView: View {
                             verbose: verbose,
                             theme: theme
                         )
+                    case .sideBySide:
+                        SideBySideDiffView(
+                            diffItems: diffItems,
+                            showLineNumbers: showLineNumbers,
+                            font: font,
+                            selectedLanguage: language,
+                            theme: theme,
+                            verbose: verbose
+                        )
                     case .original:
                         DiffContentView(
                             diffItems: createDiffItemsFromText(oldText),

@@ -26,6 +26,9 @@ struct DiffLineNumberView: View {
                 lineNumberText(line.oldLineNumber, color: theme.lineNumberColor)
                 separatorLine()
                 lineNumberText(line.newLineNumber, color: theme.lineNumberColor)
+            case .sideBySide:
+                // 并排视图不使用此组件
+                EmptyView()
             case .original:
                 lineNumberText(line.oldLineNumber, color: theme.lineNumberColor)
             case .modified:
