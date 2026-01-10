@@ -235,6 +235,7 @@ public enum DiffThemes {
 
 /// 主题选择枚举
 public enum ThemePreset: String, CaseIterable, Identifiable {
+    case auto = "Auto"
     case light = "Light"
     case dark = "Dark"
     case github = "GitHub"
@@ -244,9 +245,29 @@ public enum ThemePreset: String, CaseIterable, Identifiable {
 
     public var id: String { rawValue }
 
-    /// 获取对应的主题
+    /// 获取对应的主题（自动模式默认使用浅色主题）
     public var theme: any DiffTheme {
         switch self {
+        case .auto: return DiffThemes.light
+        case .light: return DiffThemes.light
+        case .dark: return DiffThemes.dark
+        case .github: return DiffThemes.github
+        case .vscode: return DiffThemes.vscode
+        case .highContrast: return DiffThemes.highContrast
+        case .soft: return DiffThemes.soft
+        }
+    }
+
+    /// 根据系统颜色方案获取对应的主题
+    /// - Parameter colorScheme: 系统颜色方案
+    /// - Returns: 对应的主题，如果是自动模式则根据颜色方案返回 light 或 dark
+    public func theme(for colorScheme: ColorScheme?) -> any DiffTheme {
+        switch self {
+        case .auto:
+            if let colorScheme = colorScheme {
+                return colorScheme == .dark ? DiffThemes.dark : DiffThemes.light
+            }
+            return DiffThemes.light
         case .light: return DiffThemes.light
         case .dark: return DiffThemes.dark
         case .github: return DiffThemes.github

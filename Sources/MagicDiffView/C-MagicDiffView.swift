@@ -19,7 +19,16 @@ import SwiftUI
 /// MagicDiffView(
 ///     oldText: oldCode,
 ///     newText: newCode,
-///     theme: DiffThemes.github
+///     initialTheme: .github
+/// )
+/// ```
+///
+/// 自动主题模式：
+/// ```swift
+/// MagicDiffView(
+///     oldText: oldCode,
+///     newText: newCode,
+///     initialTheme: .auto  // 根据系统设置自动选择浅色或深色主题
 /// )
 /// ```
 public struct MagicDiffView: View {
@@ -39,10 +48,11 @@ public struct MagicDiffView: View {
     @State private var selectedView: ViewMode = .diff
     @State private var selectedTheme: ThemePreset
     @State private var isInitialized: Bool = false
+    @Environment(\.colorScheme) private var colorScheme
 
     // 当前主题（从 selectedTheme 计算）
     private var theme: any DiffTheme {
-        selectedTheme.theme
+        selectedTheme.theme(for: colorScheme)
     }
 
     // 复制状态管理
@@ -58,7 +68,7 @@ public struct MagicDiffView: View {
     ///   - enableCollapsing: 是否启用折叠功能，默认为 true
     ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
     ///   - verbose: 是否启用详细日志，默认为 false
-    ///   - initialTheme: 初始主题，默认为浅色主题
+    ///   - initialTheme: 初始主题，默认为自动（根据系统设置自动选择）
     public init(
         oldText: String,
         newText: String,
@@ -67,7 +77,7 @@ public struct MagicDiffView: View {
         enableCollapsing: Bool = true,
         minUnchangedLines: Int = 3,
         verbose: Bool = false,
-        initialTheme: ThemePreset = .light
+        initialTheme: ThemePreset = .auto
     ) {
         if verbose {
             os_log("oldText: \(oldText.count) newText: \(newText.count)")
