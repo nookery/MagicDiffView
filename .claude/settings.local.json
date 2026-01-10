@@ -10,7 +10,9 @@
       "Bash(git commit:*)",
       "WebSearch",
       "mcp__web-reader__webReader",
-      "mcp__web-search-prime__webSearchPrime"
+      "mcp__web-search-prime__webSearchPrime",
+      "Bash(grep:*)",
+      "Bash(rm:*)"
     ]
   }
 }
