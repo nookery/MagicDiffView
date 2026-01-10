@@ -17,7 +17,8 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MagicDiffView"
+            name: "MagicDiffView",
+            exclude: ["DemoFiles"]
         ),
         .testTarget(
             name: "MagicDiffViewTests",
