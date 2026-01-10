@@ -55,3 +55,39 @@ public enum DiffItem {
     case line(DiffLine)
     case collapsibleBlock(CollapsibleBlock)
 }
+
+/// 差异算法版本
+public enum DiffAlgorithmVersion: String, CaseIterable {
+    /// 原始的双指针算法（默认）
+    case legacy = "Legacy"
+
+    /// Myers 算法（推荐，性能更好）
+    case myers = "Myers"
+
+    /// 自动选择（根据文件大小自动选择最合适的算法）
+    case auto = "Auto"
+
+    /// 算法描述
+    public var description: String {
+        switch self {
+        case .legacy:
+            return "传统双指针算法（适合小文件）"
+        case .myers:
+            return "Myers 算法（推荐，大文件性能更好）"
+        case .auto:
+            return "自动选择（根据文件大小）"
+        }
+    }
+
+    /// 算法复杂度描述
+    public var complexity: String {
+        switch self {
+        case .legacy:
+            return "O(m×n)"
+        case .myers:
+            return "O((m+n)×D)，D 为编辑距离"
+        case .auto:
+            return "自适应"
+        }
+    }
+}
