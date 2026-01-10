@@ -6,7 +6,6 @@ import Foundation
 /// "An O(ND) Difference Algorithm and Its Variations" (1986)
 ///
 /// 算法复杂度：O((N+M)D)，其中 D 是编辑脚本长度
-/// 比当前的双指针算法快 3-10 倍（大文件场景）
 struct MyersDiffAlgorithm {
 
     // MARK: - Public API
