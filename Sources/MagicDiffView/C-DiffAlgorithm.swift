@@ -2,59 +2,29 @@ import Foundation
 
 /// 差异计算算法
 ///
-/// 算法基本原理：
-/// 1. **逐行比较策略**：采用双指针技术同时遍历新旧文本的行数组，逐行进行比较
-/// 2. **相似度判断**：当行内容不同时，使用编辑距离算法计算相似度，判断是修改还是添加/删除
-/// 3. **最佳匹配查找**：对于相似度较低的行，在剩余行中寻找最佳匹配，优化差异检测准确性
-/// 4. **编辑距离计算**：基于 Levenshtein 距离算法，使用动态规划计算两个字符串的最小编辑操作数
-/// 5. **折叠块组织**：将连续的未变动行（默认3行以上）组织成可折叠的块，提升大文件的查看体验
+/// 使用 Myers 算法（Eugene Myers, 1986）计算文本差异
 ///
 /// 算法特点：
-/// - 支持多种算法：Legacy（双指针）、Myers（高性能）、Auto（自适应）
-/// - 时间复杂度：
-///   - Legacy: O(m×n)
-///   - Myers: O((m+n)×D)，D 为编辑距离
-/// - 空间复杂度：O(m×n)，主要用于动态规划表存储
-/// - 支持智能折叠：自动识别并折叠大段未变动内容
-/// - 边界安全：包含完整的边界检查，避免数组越界和空字符串错误
+/// - 时间复杂度：O((m+n)×D)，其中 m、n 为行数，D 为编辑距离
+/// - 空间复杂度：O(m+n)
+/// - 适合大文件处理，性能优异
+/// - 业界标准算法（Git、GitHub Desktop、VS Code 均使用）
 struct DiffAlgorithm {
-    
+
     /// 计算两个字符串数组的差异
     /// - Parameters:
     ///   - oldLines: 旧文本的行数组
     ///   - newLines: 新文本的行数组
-    ///   - version: 算法版本，默认为 auto（自动选择最合适的算法）
     /// - Returns: 差异行数组
-    static func computeDiff(
-        oldLines: [String],
-        newLines: [String],
-        version: DiffAlgorithmVersion = .auto
-    ) -> [DiffLine] {
-        // 根据版本选择算法
-        let actualVersion: DiffAlgorithmVersion
-        if version == .auto {
-            // 自动选择：大文件使用 Myers，小文件使用 Legacy
-            let totalLines = oldLines.count + newLines.count
-            actualVersion = totalLines > 500 ? .myers : .legacy
-        } else {
-            actualVersion = version
-        }
-
-        // 使用选定的算法计算差异
-        switch actualVersion {
-        case .legacy:
-            return computeLegacyDiff(oldLines: oldLines, newLines: newLines)
-        case .myers:
-            return MyersDiffAlgorithm.computeDiff(oldLines: oldLines, newLines: newLines)
-        case .auto:
-            // 不会到达这里，因为 auto 已经在上面处理了
-            return computeLegacyDiff(oldLines: oldLines, newLines: newLines)
-        }
+    static func computeDiff(oldLines: [String], newLines: [String]) -> [DiffLine] {
+        // 使用 Myers 算法
+        return MyersDiffAlgorithm.computeDiff(oldLines: oldLines, newLines: newLines)
     }
 
-    // MARK: - Legacy Algorithm
+    // MARK: - Legacy Algorithm (Deprecated)
 
-    /// 使用传统双指针算法计算差异
+    /// 传统双指针算法（已废弃，仅用于向后兼容）
+    @available(*, deprecated, message: "Myers algorithm provides better performance in all scenarios")
     private static func computeLegacyDiff(oldLines: [String], newLines: [String]) -> [DiffLine] {
         var result: [DiffLine] = []
         var oldIndex = 0

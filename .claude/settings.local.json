@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(mv:*)",
-      "Bash(swift build:*)"
+      "Bash(swift build:*)",
+      "mcp__zread__get_repo_structure",
+      "mcp__zread__read_file",
+      "mcp__zread__search_doc",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebSearch",
+      "mcp__web-reader__webReader",
+      "mcp__web-search-prime__webSearchPrime"
     ]
   }
 }

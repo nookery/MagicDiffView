@@ -18,8 +18,7 @@ struct SideBySideViewExamples: View {
 
                     MagicDiffView(
                         oldText: oldSwiftCode,
-                        newText: newSwiftCode,
-                        algorithmVersion: .myers
+                        newText: newSwiftCode
                     )
                 }
                 .tabItem {
@@ -34,8 +33,7 @@ struct SideBySideViewExamples: View {
 
                     MagicDiffView(
                         oldText: oldText,
-                        newText: newText,
-                        algorithmVersion: .myers
+                        newText: newText
                     )
                 }
                 .tabItem {
@@ -50,8 +48,7 @@ struct SideBySideViewExamples: View {
 
                     MagicDiffView(
                         oldText: largeOldCode,
-                        newText: largeNewCode,
-                        algorithmVersion: .myers
+                        newText: largeNewCode
                     )
                 }
                 .tabItem {

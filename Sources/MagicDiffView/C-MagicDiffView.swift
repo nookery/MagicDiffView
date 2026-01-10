@@ -43,7 +43,6 @@ public struct MagicDiffView: View {
     let minUnchangedLines: Int
     let verbose: Bool
     let language: CodeLanguage
-    let algorithmVersion: DiffAlgorithmVersion
 
     // 状态管理
     @State private var selectedView: ViewMode = .diff
@@ -70,7 +69,6 @@ public struct MagicDiffView: View {
     ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
     ///   - verbose: 是否启用详细日志，默认为 false
     ///   - initialTheme: 初始主题，默认为自动（根据系统设置自动选择）
-    ///   - algorithmVersion: 差异算法版本，默认为自动（根据文件大小自动选择）
     public init(
         oldText: String,
         newText: String,
@@ -79,8 +77,7 @@ public struct MagicDiffView: View {
         enableCollapsing: Bool = true,
         minUnchangedLines: Int = 3,
         verbose: Bool = false,
-        initialTheme: ThemePreset = .auto,
-        algorithmVersion: DiffAlgorithmVersion = .auto
+        initialTheme: ThemePreset = .auto
     ) {
         if verbose {
             os_log("oldText: \(oldText.count) newText: \(newText.count)")
@@ -94,7 +91,6 @@ public struct MagicDiffView: View {
         self.minUnchangedLines = minUnchangedLines
         self.verbose = verbose
         self.language = SyntaxHighlighter.detectLanguage(newText)
-        self.algorithmVersion = algorithmVersion
         self._selectedTheme = State(initialValue: initialTheme)
 
         if verbose {
