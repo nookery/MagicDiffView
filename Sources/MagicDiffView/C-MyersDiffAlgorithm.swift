@@ -8,6 +8,7 @@ import Foundation
 /// - 对于相似文件（D 很小），性能接近 O(ND)
 /// - 对于大文件，内存效率高
 /// - 实现简洁可靠，适合生产环境使用
+/// - 支持 unified diff 格式解析，与 Git 兼容
 ///
 /// 算法核心思想：
 /// 1. 使用优化的 LCS（最长公共子序列）算法
@@ -52,6 +53,128 @@ struct MyersDiffAlgorithm {
 
         // 使用优化的差异算法
         return computeOptimizedDiff(oldLines: oldLines, newLines: newLines)
+    }
+
+    // MARK: - Unified Diff Parser
+
+    /// 解析 unified diff 格式的文本
+    ///
+    /// 支持标准 unified diff 格式，如 Git 输出：
+    /// ```
+    /// @@ -1,5 +1,6 @@
+    ///  line 1
+    /// -line 2 old
+    /// +line 2 new
+    ///  line 3
+    /// ```
+    ///
+    /// - Parameter unifiedDiffText: unified diff 格式的文本
+    /// - Returns: 差异行数组
+    /// - Throws: DiffParseError 如果解析失败
+    static func parseUnifiedDiff(_ unifiedDiffText: String) throws -> [DiffLine] {
+        var result: [DiffLine] = []
+        let lines = unifiedDiffText.components(separatedBy: .newlines)
+
+        var oldLineNumber: Int?
+        var newLineNumber: Int?
+        var i = 0
+
+        while i < lines.count {
+            let line = lines[i]
+
+            // 解析 hunk 头部：@@ -oldStart,oldCount +newStart,newCount @@
+            if line.hasPrefix("@@") {
+                if let range = line.range(of: "-(\\d+)", options: .regularExpression),
+                   let newRange = line.range(of: "\\+(\\d+)", options: .regularExpression) {
+                    let oldStartStr = line[range].dropFirst()
+                    let newStartStr = line[newRange].dropFirst()
+
+                    if let oldStart = Int(oldStartStr),
+                       let newStart = Int(newStartStr) {
+                        oldLineNumber = oldStart
+                        newLineNumber = newStart
+                    }
+                }
+                i += 1
+                continue
+            }
+
+            // 跳过 diff 头部信息（如 ---, +++ ）
+            if line.hasPrefix("---") || line.hasPrefix("+++") || line.isEmpty {
+                i += 1
+                continue
+            }
+
+            // 解析差异行
+            if !line.isEmpty {
+                let diffLine: DiffLine
+
+                if line.hasPrefix("+") {
+                    // 新增的行
+                    diffLine = DiffLine(
+                        content: String(line.dropFirst()),
+                        type: .added,
+                        oldLineNumber: nil,
+                        newLineNumber: newLineNumber
+                    )
+                    newLineNumber? += 1
+                } else if line.hasPrefix("-") {
+                    // 删除的行
+                    diffLine = DiffLine(
+                        content: String(line.dropFirst()),
+                        type: .removed,
+                        oldLineNumber: oldLineNumber,
+                        newLineNumber: nil
+                    )
+                    oldLineNumber? += 1
+                } else if line.hasPrefix(" ") {
+                    // 未改变的行（context）
+                    diffLine = DiffLine(
+                        content: String(line.dropFirst()),
+                        type: .unchanged,
+                        oldLineNumber: oldLineNumber,
+                        newLineNumber: newLineNumber
+                    )
+                    oldLineNumber? += 1
+                    newLineNumber? += 1
+                } else {
+                    // 不以 +, -, 或 空格开头的行，作为 unchanged 处理
+                    diffLine = DiffLine(
+                        content: line,
+                        type: .unchanged,
+                        oldLineNumber: oldLineNumber,
+                        newLineNumber: newLineNumber
+                    )
+                    oldLineNumber? += 1
+                    newLineNumber? += 1
+                }
+
+                result.append(diffLine)
+            }
+
+            i += 1
+        }
+
+        return result
+    }
+
+    /// 解析 unified diff 格式（不抛出异常版本）
+    ///
+    /// - Parameter unifiedDiffText: unified diff 格式的文本
+    /// - Returns: 差异行数组，如果解析失败返回空数组
+    static func parseUnifiedDiffSafely(_ unifiedDiffText: String) -> [DiffLine] {
+        // 检查是否包含有效的 hunk 头部
+        let hasValidHunk = unifiedDiffText.contains("@@")
+        if !hasValidHunk {
+            return []
+        }
+
+        do {
+            return try parseUnifiedDiff(unifiedDiffText)
+        } catch {
+            print("[MyersDiffAlgorithm] Failed to parse unified diff: \(error)")
+            return []
+        }
     }
 
     // MARK: - Optimized Diff Algorithm
@@ -248,5 +371,25 @@ struct MyersDiffAlgorithm {
         }
 
         return result
+    }
+}
+
+// MARK: - Error Types
+
+/// Diff 解析错误
+enum DiffParseError: Error, LocalizedError {
+    case invalidFormat(String)
+    case malformedHunkHeader(String)
+    case unexpectedEndOfFile
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidFormat(let message):
+            return "Invalid diff format: \(message)"
+        case .malformedHunkHeader(let header):
+            return "Malformed hunk header: \(header)"
+        case .unexpectedEndOfFile:
+            return "Unexpected end of diff file"
+        }
     }
 }

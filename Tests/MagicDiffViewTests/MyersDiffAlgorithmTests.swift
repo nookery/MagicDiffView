@@ -400,4 +400,231 @@ final class MyersDiffAlgorithmTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - Unified Diff 解析测试
+
+    /// 测试基本的 unified diff 解析
+    func testParseUnifiedDiffBasic() throws {
+        let diffText = """
+        @@ -1,3 +1,3 @@
+         Line 1
+        -Line 2 old
+        +Line 2 new
+         Line 3
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 4)
+        XCTAssertEqual(result[0].type, .unchanged)
+        XCTAssertEqual(result[0].oldLineNumber, 1)
+        XCTAssertEqual(result[0].newLineNumber, 1)
+
+        XCTAssertEqual(result[1].type, .removed)
+        XCTAssertEqual(result[1].oldLineNumber, 2)
+        XCTAssertEqual(result[1].newLineNumber, nil)
+
+        XCTAssertEqual(result[2].type, .added)
+        XCTAssertEqual(result[2].oldLineNumber, nil)
+        XCTAssertEqual(result[2].newLineNumber, 2)
+
+        XCTAssertEqual(result[3].type, .unchanged)
+        XCTAssertEqual(result[3].oldLineNumber, 3)
+        XCTAssertEqual(result[3].newLineNumber, 3)
+    }
+
+    /// 测试带文件头的 unified diff 解析
+    func testParseUnifiedDiffWithFileHeaders() throws {
+        let diffText = """
+        --- old.txt
+        +++ new.txt
+        @@ -1,3 +1,3 @@
+         Line 1
+        -Line 2 old
+        +Line 2 new
+         Line 3
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 4)
+        XCTAssertEqual(result[1].type, .removed)
+        XCTAssertEqual(result[2].type, .added)
+    }
+
+    /// 测试只有新增的 diff
+    func testParseUnifiedDiffOnlyAdditions() throws {
+        let diffText = """
+        @@ -1,0 +1,2 @@
+        +New Line 1
+        +New Line 2
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 2)
+        XCTAssertEqual(result[0].type, .added)
+        XCTAssertEqual(result[0].newLineNumber, 1)
+        XCTAssertEqual(result[1].type, .added)
+        XCTAssertEqual(result[1].newLineNumber, 2)
+    }
+
+    /// 测试只有删除的 diff
+    func testParseUnifiedDiffOnlyDeletions() throws {
+        let diffText = """
+        @@ -1,2 +1,0 @@
+        -Old Line 1
+        -Old Line 2
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 2)
+        XCTAssertEqual(result[0].type, .removed)
+        XCTAssertEqual(result[0].oldLineNumber, 1)
+        XCTAssertEqual(result[1].type, .removed)
+        XCTAssertEqual(result[1].oldLineNumber, 2)
+    }
+
+    /// 测试多个 hunk 的 diff
+    func testParseUnifiedDiffMultipleHunks() throws {
+        let diffText = """
+        @@ -1,3 +1,3 @@
+         Line 1
+        -Line 2 old
+        +Line 2 new
+         Line 3
+        @@ -5,2 +5,2 @@
+         Line 5
+        -Line 6 old
+        +Line 6 new
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 7)
+        XCTAssertEqual(result[1].type, .removed)
+        XCTAssertEqual(result[2].type, .added)
+        XCTAssertEqual(result[5].type, .removed)
+        XCTAssertEqual(result[6].type, .added)
+    }
+
+    /// 测试 Git 风格的 diff
+    func testParseGitStyleDiff() throws {
+        let diffText = """
+        diff --git a/file.txt b/file.txt
+        index 1234567..abcdefg 100644
+        --- a/file.txt
+        +++ b/file.txt
+        @@ -1,5 +1,5 @@
+         import Foundation
+         class User {
+        -    let name: String
+        +    let name: String?
+         let age: Int
+         }
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        // 查找改变的行
+        let removedLine = result.first { $0.type == .removed }
+        let addedLine = result.first { $0.type == .added }
+
+        XCTAssertNotNil(removedLine)
+        XCTAssertNotNil(addedLine)
+        XCTAssertEqual(removedLine?.content, "    let name: String")
+        XCTAssertEqual(addedLine?.content, "    let name: String?")
+    }
+
+    /// 测试空 diff
+    func testParseEmptyDiff() throws {
+        let diffText = ""
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 0)
+    }
+
+    /// 测试只有 context 的 diff（无变化）
+    func testParseUnifiedDiffOnlyContext() throws {
+        let diffText = """
+        @@ -1,3 +1,3 @@
+         Line 1
+         Line 2
+         Line 3
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 3)
+        for line in result {
+            XCTAssertEqual(line.type, .unchanged)
+        }
+    }
+
+    /// 测试安全的 diff 解析（不抛出异常）
+    func testParseUnifiedDiffSafely() {
+        let invalidDiff = "This is not a valid unified diff"
+
+        let result = MyersDiffAlgorithm.parseUnifiedDiffSafely(invalidDiff)
+
+        // 应该返回空数组而不是崩溃
+        XCTAssertEqual(result.count, 0)
+    }
+
+    /// 测试行号正确性
+    func testParseUnifiedDiffLineNumbers() throws {
+        let diffText = """
+        @@ -10,5 +10,6 @@
+         Line 10
+         Line 11
+        -Line 12 old
+        +Line 12 new
+         Line 13
+        +Line 14 new
+         Line 15
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        // 验证行号
+        let unchanged10 = result[0]
+        let removed12 = result.first { $0.type == .removed }
+        let added12 = result.first { $0.type == .added && $0.content == "Line 12 new" }
+        let added14 = result.first { $0.type == .added && $0.content == "Line 14 new" }
+
+        XCTAssertEqual(unchanged10.oldLineNumber, 10)
+        XCTAssertEqual(unchanged10.newLineNumber, 10)
+        XCTAssertEqual(removed12?.oldLineNumber, 12)
+        XCTAssertEqual(added12?.newLineNumber, 12)
+        XCTAssertEqual(added14?.newLineNumber, 14)
+    }
+
+    /// 测试混合修改的 diff
+    func testParseUnifiedDiffMixedChanges() throws {
+        let diffText = """
+        @@ -1,5 +1,7 @@
+         Line 1
+        -Line 2 deleted
+         Line 3
+        +Line 4 inserted
+         Line 5
+        +Line 6 inserted
+        -Line 7 deleted
+        +Line 8 inserted
+        """
+
+        let result = try MyersDiffAlgorithm.parseUnifiedDiff(diffText)
+
+        XCTAssertEqual(result.count, 8)
+
+        let removedLines = result.filter { $0.type == .removed }
+        let addedLines = result.filter { $0.type == .added }
+        let unchangedLines = result.filter { $0.type == .unchanged }
+
+        XCTAssertEqual(removedLines.count, 2)
+        XCTAssertEqual(addedLines.count, 3)
+        XCTAssertEqual(unchangedLines.count, 3)
+    }
 }
