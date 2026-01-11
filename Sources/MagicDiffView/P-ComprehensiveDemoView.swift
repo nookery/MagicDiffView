@@ -1,80 +1,66 @@
 import SwiftUI
 
-/// 综合演示视图 - 展示所有编程语言示例
+/// 综合演示视图 - 使用 TabView 展示所有编程语言示例
 struct ComprehensiveDemoView: View {
-    @State private var selectedDemo: DemoFile?
+    @State private var selectedTab = 0
 
     var body: some View {
-        NavigationSplitView {
-            // 左侧：数字编号列表
-            List {
-                ForEach(Array(demoFiles.enumerated()), id: \.element.id) { index, demo in
-                    Button(action: {
-                        selectedDemo = demo
-                    }) {
-                        HStack {
+        TabView(selection: $selectedTab) {
+            ForEach(Array(demoFiles.enumerated()), id: \.element.id) { index, demo in
+                DemoDetailView(demo: demo)
+                    .tabItem {
+                        VStack {
                             Text("\(index + 1)")
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if selectedDemo?.id == demo.id {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .navigationTitle("演示")
-        } detail: {
-            // 右侧：差异视图
-            if let demo = selectedDemo {
-                VStack(spacing: 0) {
-                    // 文件信息
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(demo.name)
-                                .font(.headline)
-                            Text(demo.language.rawValue)
+                            Text(demo.language.displayName)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
                         }
-                        Spacer()
                     }
-                    .padding()
-                    .background(Color(.controlBackgroundColor))
-
-                    // 差异视图
-                    MagicDiffView(
-                        oldText: demo.beforeContent,
-                        newText: demo.afterContent,
-                        showLineNumbers: true,
-                        font: .system(.body, design: .monospaced),
-                        enableCollapsing: true,
-                        minUnchangedLines: 3,
-                        verbose: false,
-                        initialTheme: .auto
-                    )
-                }
-            } else {
-                // 欢迎界面
-                VStack(spacing: 24) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 64))
-                        .foregroundStyle(Color.accentColor)
-
-                    Text("选择一个示例开始")
-                        .font(.title2)
-
-                    Text("从左侧列表中选择一个编程语言示例\n查看代码差异对比")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .tag(index)
             }
+        }
+        .frame(minWidth: 1000, minHeight: 600)
+    }
+}
+
+/// 单个演示的详情视图
+struct DemoDetailView: View {
+    let demo: DemoFile
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // 文件信息头
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(demo.name)
+                        .font(.headline)
+                    Text(demo.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    Text(demo.language.rawValue)
+                        .font(.caption2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundStyle(Color.accentColor)
+                        .cornerRadius(4)
+                }
+                Spacer()
+            }
+            .padding()
+            .background(Color(.controlBackgroundColor))
+
+            // 差异视图
+            MagicDiffView(
+                oldText: demo.beforeContent,
+                newText: demo.afterContent,
+                showLineNumbers: true,
+                font: .system(.body, design: .monospaced),
+                enableCollapsing: true,
+                minUnchangedLines: 3,
+                verbose: false,
+                initialTheme: .auto
+            )
         }
     }
 }
@@ -1032,5 +1018,4 @@ impl UserManager {
 
 #Preview("综合演示") {
     ComprehensiveDemoView()
-        .frame(minWidth: 1000, minHeight: 600)
 }
