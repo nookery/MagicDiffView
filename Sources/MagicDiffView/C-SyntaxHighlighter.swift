@@ -222,93 +222,103 @@ public struct SyntaxHighlighter {
             let preview = String(text.prefix(200))
             os_log("🔍 文本预览: \(preview)")
         }
-        
-        // 基于文件特征的语言检测逻辑
-        let firstLines = text.components(separatedBy: .newlines).prefix(5).joined(separator: "\n")
-        
-        // Swift特征
-        let hasImportSwiftUI = firstLines.contains("import SwiftUI")
-        let hasImportFoundation = firstLines.contains("import Foundation")
-        let hasState = text.contains("@State")
-        let hasStructView = text.contains("struct") && text.contains(": View")
-        
-        if hasImportSwiftUI || hasImportFoundation || hasState || hasStructView {
+
+        let lines = text.components(separatedBy: .newlines)
+        let firstLines = lines.prefix(5)
+
+        // PHP特征 - 需要优先检查（独特的 <?php 标签）
+        if firstLines.contains(where: { $0.hasPrefix("<?php") }) ||
+           text.contains("<?php") ||
+           (text.contains("$") && (text.contains("function ") || text.contains("class "))) {
             if verbose {
-                os_log("👓 检测到 Swift 代码")
+                os_log("👓 检测到 PHP 代码")
             }
-            return .swift
+            return .php
         }
-        
-        // JavaScript特征
-        if firstLines.contains("const ") || firstLines.contains("let ") ||
-           firstLines.contains("import ") && firstLines.contains("from '") ||
-           text.contains("function") || text.contains("=>") {
+
+        // C++特征 - 独特的 #include
+        if firstLines.contains(where: { $0.hasPrefix("#include") }) ||
+           text.contains("using namespace") || text.contains("std::") {
             if verbose {
-                os_log("👓 检测到 JavaScript 代码")
+                os_log("👓 检测到 C++ 代码")
             }
-            return .javascript
+            return .cpp
         }
-        
-        // Python特征
-        if firstLines.contains("def ") || firstLines.contains("import ") ||
-           text.contains("class ") && text.contains("self") ||
+
+        // Python特征 - 独特的 from import, def, 冒号, # 注释
+        if firstLines.contains(where: { $0.hasPrefix("def ") || $0.hasPrefix("class ") || $0.hasPrefix("from ") || $0.hasPrefix("import ") }) ||
+           text.contains(" from ") || text.contains(" import ") && (text.contains("def ") || text.contains("class ")) ||
+           text.contains(":#") || text.contains(": #") ||
            text.contains("#!") && text.contains("python") {
             if verbose {
                 os_log("👓 检测到 Python 代码")
             }
             return .python
         }
-        
-        // Java特征
-        if firstLines.contains("public class ") || firstLines.contains("package ") ||
-           text.contains("import java.") || text.contains("@Override") {
+
+        // Java特征 - import java., package, @Override
+        if firstLines.contains(where: { $0.hasPrefix("package ") || $0.contains("public class ") }) ||
+           text.contains("import java.") || text.contains("@Override") ||
+           text.contains(" implements ") || text.contains(" extends ") && text.contains("public class") {
             if verbose {
                 os_log("👓 检测到 Java 代码")
             }
             return .java
         }
-        
-        // C++特征
-        if firstLines.contains("#include") || firstLines.contains("using namespace") ||
-           text.contains("int main") || text.contains("std::") {
+
+        // JavaScript特征 - import ... from, const/let/var, =>, function
+        if firstLines.contains(where: { $0.hasPrefix("const ") || $0.hasPrefix("let ") || $0.hasPrefix("var ") }) ||
+           firstLines.contains(where: { $0.contains("import ") && $0.contains(" from ") }) ||
+           text.contains("function ") && (text.contains("var ") || text.contains("let ") || text.contains("const ")) ||
+           text.contains(" => ") || text.contains("require(") {
             if verbose {
-                os_log("👓 检测到 C++ 代码")
+                os_log("👓 检测到 JavaScript 代码")
             }
-            return .cpp
+            return .javascript
         }
-        
+
+        // Swift特征 - struct: View, @State, @Published, import (但要排除其他语言)
+        if text.contains("struct") && (text.contains(": View") || text.contains(": UIViewController")) ||
+           text.contains("@State") || text.contains("@Published") ||
+           text.contains("@Observable") ||
+           (firstLines.contains(where: { $0.hasPrefix("import ") }) &&
+            (text.contains("struct") || text.contains("class") || text.contains("func ") || text.contains("var ") || text.contains("let "))) {
+            if verbose {
+                os_log("👓 检测到 Swift 代码")
+            }
+            return .swift
+        }
+
         // HTML特征
-        if firstLines.contains("<!DOCTYPE") || firstLines.contains("<html") ||
-           text.contains("</div>") || text.contains("<head>") {
+        if firstLines.contains(where: { $0.hasPrefix("<!DOCTYPE") || $0.hasPrefix("<html") || $0.contains("<div") }) ||
+           text.contains("</div>") || text.contains("<head>") || text.contains("<body") {
             if verbose {
                 os_log("👓 检测到 HTML 代码")
             }
             return .html
         }
-        
-        // CSS特征
-        if text.contains("{") && text.contains("}") &&
-           (text.contains("px") || text.contains("em") || text.contains("#")) &&
-           !text.contains("function") {
-            if verbose {
-                os_log("👓 检测到 CSS 代码")
+
+        // CSS特征 - 检查选择器模式
+        if text.contains("{") && text.contains("}") {
+            // 检查常见的 CSS 模式
+            let hasCSS = lines.filter { line in
+                // 检查选择器: .class, #id, element {, property: value
+                line.contains(".") || line.contains("#") ||
+                line.contains(":") && (line.contains("px") || line.contains("em") || line.contains("rem") || line.contains("%") || line.contains(";")) ||
+                (line.contains("{") || line.trimmingCharacters(in: .whitespaces).hasSuffix("{")) && !line.contains("function")
             }
-            return .css
-        }
-        
-        // PHP特征
-        if firstLines.contains("<?php") || firstLines.contains("namespace ") ||
-           text.contains("function") && text.contains("$") {
-            if verbose {
-                os_log("👓 检测到 PHP 代码")
+            if !hasCSS.isEmpty && !text.contains("function") && !text.contains("class ") && !text.contains("import ") {
+                if verbose {
+                    os_log("👓 检测到 CSS 代码")
+                }
+                return .css
             }
-            return .php
         }
-        
+
         if verbose {
             os_log("❌ 未检测到特定语言，返回 plainText")
         }
-        
+
         return .plainText
     }
     

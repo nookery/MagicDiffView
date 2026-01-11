@@ -6,40 +6,28 @@ struct ComprehensiveDemoView: View {
 
     var body: some View {
         NavigationSplitView {
-            // 左侧：所有示例文件列表
+            // 左侧：数字编号列表
             List {
-                ForEach(demoFiles) { demo in
+                ForEach(Array(demoFiles.enumerated()), id: \.element.id) { index, demo in
                     Button(action: {
                         selectedDemo = demo
                     }) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Image(systemName: "doc.fill")
+                        HStack {
+                            Text("\(index + 1)")
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if selectedDemo?.id == demo.id {
+                                Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accentColor)
-                                Text(demo.name)
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
-                                Text("(\(demo.language.rawValue))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                if selectedDemo?.id == demo.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accentColor)
-                                }
                             }
-
-                            Text(demo.description)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 8)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .navigationTitle("演示示例")
+            .navigationTitle("演示")
         } detail: {
             // 右侧：差异视图
             if let demo = selectedDemo {
@@ -49,7 +37,7 @@ struct ComprehensiveDemoView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(demo.name)
                                 .font(.headline)
-                            Text("\(demo.language.rawValue) - \(demo.description)")
+                            Text(demo.language.rawValue)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

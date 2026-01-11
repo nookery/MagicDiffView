@@ -63,8 +63,7 @@ final class SyntaxHighlighterTests: XCTestCase {
 
         for code in javaCodes {
             let detected = SyntaxHighlighter.detectLanguage(code)
-            // Java 检测可能失败，只验证算法不会崩溃
-            XCTAssertNotNil(detected, "Should detect a language for Java code")
+            XCTAssertEqual(detected, .java, "Failed to detect Java code: \(code)")
         }
     }
 
@@ -109,9 +108,7 @@ final class SyntaxHighlighterTests: XCTestCase {
 
         for code in cssCodes {
             let detected = SyntaxHighlighter.detectLanguage(code)
-            // CSS 检测可能失败，因为简单的代码片段可能不具备足够的特征
-            // 只验证算法不会崩溃
-            XCTAssertNotNil(detected, "Should detect a language for CSS code")
+            XCTAssertEqual(detected, .css, "Failed to detect CSS code: \(code)")
         }
     }
 
@@ -126,8 +123,7 @@ final class SyntaxHighlighterTests: XCTestCase {
 
         for code in phpCodes {
             let detected = SyntaxHighlighter.detectLanguage(code)
-            // PHP 检测可能失败，只验证算法不会崩溃
-            XCTAssertNotNil(detected, "Should detect a language for PHP code")
+            XCTAssertEqual(detected, .php, "Failed to detect PHP code: \(code)")
         }
     }
 
@@ -170,7 +166,16 @@ final class SyntaxHighlighterTests: XCTestCase {
         let swiftCode = "class Test { func hello() { var x = 1 } }"
         let rules = CodeLanguage.swift.rules
 
-        // 只验证高亮功能不会崩溃
+        // 验证关键字高亮规则存在
+        let keywordRule = rules.first { $0.pattern.contains("\\bclass\\b") && $0.pattern.contains("\\bfunc\\b") }
+        XCTAssertNotNil(keywordRule, "Swift should have keyword highlighting rule")
+
+        // 验证关键字规则的样式
+        if let rule = keywordRule {
+            XCTAssertEqual(rule.color, .purple, "Swift keywords should be purple")
+        }
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: swiftCode, rules: rules)
         XCTAssertNotNil(highlighted, "Swift highlighting should work")
     }
@@ -180,12 +185,18 @@ final class SyntaxHighlighterTests: XCTestCase {
         let jsCode = "const x = 'hello';\nconst y = \"world\";"
         let rules = CodeLanguage.javascript.rules
 
-        // 测试字符串高亮规则存在
-        let stringRule = rules.first { $0.pattern.contains("'|\"") }
+        // 验证字符串高亮规则存在
+        let stringRule = rules.first { $0.pattern.contains("'") && $0.pattern.contains("\"") }
         XCTAssertNotNil(stringRule, "JavaScript should have string highlighting rule")
 
+        // 验证字符串规则的样式
+        if let rule = stringRule {
+            XCTAssertEqual(rule.color, .red, "JavaScript strings should be red")
+        }
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: jsCode, rules: rules)
-        XCTAssertNotNil(highlighted)
+        XCTAssertNotNil(highlighted, "JavaScript highlighting should work")
     }
 
     /// 测试 Python 注释高亮
@@ -193,12 +204,18 @@ final class SyntaxHighlighterTests: XCTestCase {
         let pythonCode = "# This is a comment\nx = 1  # Another comment"
         let rules = CodeLanguage.python.rules
 
-        // 测试注释高亮规则存在
+        // 验证注释高亮规则存在
         let commentRule = rules.first { $0.pattern.contains("#") }
         XCTAssertNotNil(commentRule, "Python should have comment highlighting rule")
 
+        // 验证注释规则的样式
+        if let rule = commentRule {
+            XCTAssertEqual(rule.color, .secondary, "Python comments should be secondary color")
+        }
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: pythonCode, rules: rules)
-        XCTAssertNotNil(highlighted)
+        XCTAssertNotNil(highlighted, "Python highlighting should work")
     }
 
     /// 测试数字高亮
@@ -212,7 +229,17 @@ final class SyntaxHighlighterTests: XCTestCase {
 
         for (language, code) in testCases {
             let rules = language.rules
-            // 只验证高亮功能不会崩溃
+
+            // 验证数字高亮规则存在
+            let numberRule = rules.first { $0.pattern.contains("\\d") || $0.pattern.contains("[0-9]") }
+            XCTAssertNotNil(numberRule, "\(language) should have number highlighting rule")
+
+            // 验证数字规则的样式
+            if let rule = numberRule {
+                XCTAssertEqual(rule.color, .blue, "\(language) numbers should be blue")
+            }
+
+            // 验证高亮功能正常工作
             let highlighted = SyntaxHighlighter.highlight(text: code, rules: rules)
             XCTAssertNotNil(highlighted, "\(language) highlighting should work")
         }
@@ -416,8 +443,14 @@ final class SyntaxHighlighterTests: XCTestCase {
         """
 
         let rules = CodeLanguage.swift.rules
+
+        // 验证有足够的高亮规则来处理复杂代码
+        XCTAssertFalse(rules.isEmpty, "Swift should have highlighting rules")
+        XCTAssertGreaterThanOrEqual(rules.count, 3, "Swift should have at least 3 highlighting rules (keywords, strings, numbers)")
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: nestedCode, rules: rules)
-        XCTAssertNotNil(highlighted)
+        XCTAssertNotNil(highlighted, "Nested structure highlighting should work")
     }
 
     /// 测试性能 - 大文本高亮
@@ -440,7 +473,16 @@ final class SyntaxHighlighterTests: XCTestCase {
         let html = "<div class='container'><p>Hello</p></div>"
         let rules = CodeLanguage.html.rules
 
-        // 只验证高亮功能不会崩溃
+        // 验证标签高亮规则存在
+        let tagRule = rules.first { $0.pattern.contains("</?[a-zA-Z]") }
+        XCTAssertNotNil(tagRule, "HTML should have tag highlighting rule")
+
+        // 验证标签规则的样式
+        if let rule = tagRule {
+            XCTAssertEqual(rule.color, .purple, "HTML tags should be purple")
+        }
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: html, rules: rules)
         XCTAssertNotNil(highlighted, "HTML highlighting should work")
     }
@@ -450,11 +492,18 @@ final class SyntaxHighlighterTests: XCTestCase {
         let htmlComment = "<!-- This is a comment -->"
         let rules = CodeLanguage.html.rules
 
+        // 验证注释高亮规则存在
         let commentRule = rules.first { $0.pattern.contains("<!--") }
         XCTAssertNotNil(commentRule, "HTML should have comment highlighting rule")
 
+        // 验证注释规则的样式
+        if let rule = commentRule {
+            XCTAssertEqual(rule.color, .secondary, "HTML comments should be secondary color")
+        }
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: htmlComment, rules: rules)
-        XCTAssertNotNil(highlighted)
+        XCTAssertNotNil(highlighted, "HTML highlighting should work")
     }
 
     // MARK: - CSS 特定测试
@@ -464,11 +513,18 @@ final class SyntaxHighlighterTests: XCTestCase {
         let cssColors = ".class { color: #fff; background: #000; }"
         let rules = CodeLanguage.css.rules
 
+        // 验证颜色高亮规则存在
         let colorRule = rules.first { $0.pattern.contains("#[a-fA-F0-9]") }
         XCTAssertNotNil(colorRule, "CSS should have color highlighting rule")
 
+        // 验证颜色规则的样式
+        if let rule = colorRule {
+            XCTAssertEqual(rule.color, .red, "CSS colors should be red")
+        }
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: cssColors, rules: rules)
-        XCTAssertNotNil(highlighted)
+        XCTAssertNotNil(highlighted, "CSS highlighting should work")
     }
 
     /// 测试 CSS 单位高亮
@@ -476,11 +532,18 @@ final class SyntaxHighlighterTests: XCTestCase {
         let cssUnits = ".class { width: 100px; margin: 1em; }"
         let rules = CodeLanguage.css.rules
 
+        // 验证单位高亮规则存在
         let unitRule = rules.first { $0.pattern.contains("px|em|rem") }
         XCTAssertNotNil(unitRule, "CSS should have unit highlighting rule")
 
+        // 验证单位规则的样式
+        if let rule = unitRule {
+            XCTAssertEqual(rule.color, .orange, "CSS units should be orange")
+        }
+
+        // 验证高亮功能正常工作
         let highlighted = SyntaxHighlighter.highlight(text: cssUnits, rules: rules)
-        XCTAssertNotNil(highlighted)
+        XCTAssertNotNil(highlighted, "CSS highlighting should work")
     }
 
     // MARK: - 实际代码示例测试
