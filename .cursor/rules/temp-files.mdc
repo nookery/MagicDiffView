@@ -1,0 +1,169 @@
+---
+description: 临时文件必须放入 temp 目录进行管理
+globs: temp/**/*
+alwaysApply: true
+---
+# 临时文件管理规则
+
+本规则规范开发过程中的临时文件管理，确保代码库的整洁性和可维护性。
+
+## 临时文件分类
+
+### 需要放入 temp 目录的文件类型
+
+以下类型的文件必须放入 `temp/` 目录中进行管理：
+
+1. **调试和测试文件**
+   - 临时测试脚本 (`test_*.swift`, `debug_*.py`)
+   - 调试输出文件 (`debug.log`, `output.txt`)
+   - 临时数据文件 (`sample_data.json`, `mock_data.sql`)
+
+2. **开发工具生成的文件**
+   - 代码生成器的输出文件
+   - 构建过程中的中间文件
+   - API 响应的缓存文件
+
+3. **实验性代码**
+   - 临时分支的代码片段
+   - 概念验证 (PoC) 的实现
+   - 废弃代码的备份
+
+4. **文档草稿**
+   - 未完成的文档 (`draft_*.md`)
+   - 临时笔记文件 (`notes.txt`, `todo.txt`)
+
+## 目录结构规范
+
+```
+temp/
+├── clean_temp_files.sh    # 清理脚本
+├── README.md             # 说明文档
+└── *.swift, *.json, *.log, *.txt, *.md, *.sh  # 各种临时文件
+```
+
+## 文件命名规范
+
+### 临时文件命名规则
+
+- **前缀标识**：使用 `temp_`, `tmp_`, `draft_` 等前缀
+- **时间戳标识**：对于重要临时文件，添加日期戳 `20240111_`
+- **描述性命名**：说明文件用途，如 `temp_user_api_debug.json`
+
+### 示例
+
+```bash
+# 好的命名示例
+temp/
+├── temp_api_response_20240111.json
+├── debug_user_auth_flow_20240111.swift
+├── poc_new_feature_branch.txt
+├── draft_release_notes.md
+└── test_user_auth_flow.json
+
+# 不好的命名示例（这些应该避免）
+├── test.py                    # 应为 temp/test_debug_api.py
+├── debug.log                  # 应为 temp/debug_session_20240111.log
+├── notes.txt                  # 应为 temp/project_notes.md
+```
+
+## 清理策略
+
+### 定期清理要求
+
+1. **每日清理**：删除超过 7 天的临时文件
+2. **提交前清理**：提交代码前清理所有不必要的临时文件
+3. **里程碑清理**：项目里程碑完成后清理相关临时文件
+
+### .gitignore 配置
+
+确保 `temp/` 目录在 `.gitignore` 中正确配置：
+
+```gitignore
+# 临时文件目录
+temp/
+*.tmp
+*.bak
+```
+
+## 工作流程
+
+### 开发过程中的文件管理
+
+1. **创建临时文件时**：
+   - 立即放入 `temp/` 目录
+   - 使用描述性命名和时间戳
+   - 示例：`temp_api_debug_20240111.json`
+
+2. **文件使用完毕后**：
+   - 立即删除或移动到适当的归档位置
+   - 如果文件仍有价值，考虑正式纳入项目结构
+
+3. **代码审查时**：
+   - 检查是否有多余的临时文件
+   - 确保临时文件不被意外提交
+
+## 工具和自动化
+
+### 推荐的清理脚本
+
+可以创建清理脚本 `temp/clean_temp_files.sh`：
+
+```bash
+#!/bin/bash
+# 清理超过 7 天的临时文件
+find temp/ -type f -mtime +7 -delete
+echo "临时文件清理完成"
+```
+
+### Git Hook 集成
+
+在 `pre-commit` hook 中添加检查：
+
+```bash
+# 检查是否有临时文件意外添加到暂存区
+if git diff --cached --name-only | grep -E '\.(tmp|bak|log)$'; then
+    echo "警告：临时文件被添加到提交中，请检查是否需要移除"
+    exit 1
+fi
+```
+
+## 注意事项
+
+- **重要数据保护**：不要将重要数据误放入 temp 目录
+- **备份策略**：如果临时文件包含重要信息，及时备份到正式位置
+- **团队沟通**：临时文件的用途和清理计划应与团队成员沟通
+- **例外情况**：某些特殊情况可以例外，但需要记录原因
+
+## 示例场景
+
+### 调试 API 问题
+
+```
+# 正确做法
+temp/
+├── temp_api_response_20240111.json
+├── debug_network_log_20240111.txt
+└── temp_user_session_data.sql
+
+# 错误做法
+├── api_debug.json          # 根目录
+├── network.log             # 根目录
+├── temp_data.sql           # 根目录
+```
+
+### 概念验证开发
+
+```
+# 正确做法
+temp/
+├── poc_new_auth_flow_20240111.swift
+├── experimental_ui_component.txt
+└── draft_api_redesign.md
+
+# 错误做法
+├── poc_auth.swift          # 根目录
+├── experimental.txt        # 根目录
+├── draft.md                # 根目录
+```
+
+遵循此规则将保持代码库的整洁，提高开发效率，并减少意外提交临时文件的风险。

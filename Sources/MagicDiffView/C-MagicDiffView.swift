@@ -31,12 +31,28 @@ import SwiftUI
 ///     initialTheme: .auto  // 根据系统设置自动选择浅色或深色主题
 /// )
 /// ```
+///
+/// 解析Git diff输出：
+/// ```swift
+/// MagicDiffView(
+///     diffOutput: """
+///     diff --git a/file.txt b/file.txt
+///     @@ -1,3 +1,3 @@
+///      Line 1
+///     -Line 2 old
+///     +Line 2 new
+///      Line 3
+///     """
+/// )
+/// ```
 public struct MagicDiffView: View {
     public nonisolated static let emoji = "🖥️"
 
     // 配置属性
-    let oldText: String
-    let newText: String
+    let oldText: String?
+    let newText: String?
+    let diffOutput: String?
+    let diffLines: [DiffLine]?
     let showLineNumbers: Bool
     let font: Font
     let enableCollapsing: Bool
@@ -85,6 +101,8 @@ public struct MagicDiffView: View {
 
         self.oldText = oldText
         self.newText = newText
+        self.diffOutput = nil
+        self.diffLines = nil
         self.showLineNumbers = showLineNumbers
         self.font = font
         self.enableCollapsing = enableCollapsing
@@ -98,6 +116,58 @@ public struct MagicDiffView: View {
         }
     }
 
+    /// 创建差异比较视图（解析Git Diff输出）
+    /// - Parameters:
+    ///   - diffOutput: Git diff 格式的文本输出
+    ///   - showLineNumbers: 是否显示行号，默认为 true
+    ///   - font: 文本字体，默认为等宽字体
+    ///   - enableCollapsing: 是否启用折叠功能，默认为 true
+    ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
+    ///   - verbose: 是否启用详细日志，默认为 false
+    ///   - initialTheme: 初始主题，默认为自动（根据系统设置自动选择）
+    public init(
+        diffOutput: String,
+        showLineNumbers: Bool = true,
+        font: Font = .system(.body, design: .monospaced),
+        enableCollapsing: Bool = true,
+        minUnchangedLines: Int = 3,
+        verbose: Bool = false,
+        initialTheme: ThemePreset = .auto
+    ) {
+        if verbose {
+            os_log("diffOutput: \(diffOutput.count)")
+        }
+
+        let parsedDiffLines = MyersDiffAlgorithm.parseUnifiedDiffSafely(diffOutput)
+
+        self.oldText = nil
+        self.newText = nil
+        self.diffOutput = diffOutput
+        self.diffLines = parsedDiffLines
+        self.showLineNumbers = showLineNumbers
+        self.font = font
+        self.enableCollapsing = enableCollapsing
+        self.minUnchangedLines = minUnchangedLines
+        self.verbose = verbose
+
+        // 从diff内容中检测语言
+        let sampleContent = parsedDiffLines.compactMap { line in
+            switch line.type {
+            case .added, .unchanged:
+                return line.content
+            case .removed, .modified:
+                return nil
+            }
+        }.joined(separator: "\n")
+        self.language = SyntaxHighlighter.detectLanguage(sampleContent)
+
+        self._selectedTheme = State(initialValue: initialTheme)
+
+        if verbose {
+            os_log("🔍 Diff解析完成，差异行数: \(parsedDiffLines.count)")
+        }
+    }
+
     public var body: some View {
         ZStack {
             VStack(spacing: 0) {
@@ -106,8 +176,8 @@ public struct MagicDiffView: View {
                     selectedView: $selectedView,
                     selectedTheme: $selectedTheme,
                     copyState: $copyState,
-                    oldText: oldText,
-                    newText: newText,
+                    oldText: oldText ?? reconstructedOldText,
+                    newText: newText ?? reconstructedNewText,
                     verbose: verbose,
                     onCopy: copyToClipboard
                 )
@@ -136,7 +206,7 @@ public struct MagicDiffView: View {
                         )
                     case .original:
                         DiffContentView(
-                            diffItems: createDiffItemsFromText(oldText),
+                            diffItems: createDiffItemsFromText(oldText ?? reconstructedOldText),
                             showLineNumbers: showLineNumbers,
                             font: font,
                             selectedLanguage: language,
@@ -146,7 +216,7 @@ public struct MagicDiffView: View {
                         )
                     case .modified:
                         DiffContentView(
-                            diffItems: createDiffItemsFromText(newText),
+                            diffItems: createDiffItemsFromText(newText ?? reconstructedNewText),
                             showLineNumbers: showLineNumbers,
                             font: font,
                             selectedLanguage: language,
@@ -164,9 +234,49 @@ public struct MagicDiffView: View {
         }
     }
 
+    /// 从diffLines重建的原始文本（用于diffOutput模式）
+    private var reconstructedOldText: String {
+        guard let diffLines = self.diffLines else { return "" }
+        return diffLines.compactMap { line in
+            switch line.type {
+            case .unchanged, .removed:
+                return line.content
+            case .added, .modified:
+                return nil
+            }
+        }.joined(separator: "\n")
+    }
+
+    /// 从diffLines重建的新文本（用于diffOutput模式）
+    private var reconstructedNewText: String {
+        guard let diffLines = self.diffLines else { return "" }
+        return diffLines.compactMap { line in
+            switch line.type {
+            case .unchanged, .added:
+                return line.content
+            case .removed, .modified:
+                return nil
+            }
+        }.joined(separator: "\n")
+    }
+
     /// 计算差异项目（包含折叠块）
     private var diffItems: [DiffItem] {
+        // 如果有预解析的diffLines，直接使用
+        if let diffLines = self.diffLines {
+            if enableCollapsing {
+                return DiffAlgorithm.organizeDiffItems(from: diffLines, minUnchangedLines: minUnchangedLines)
+            } else {
+                // 不启用折叠时，将所有行转换为普通行项目
+                return diffLines.map { .line($0) }
+            }
+        }
+
         // 处理空文本的情况，避免返回包含空字符串的数组
+        guard let oldText = oldText, let newText = newText else {
+            return []
+        }
+
         let oldLines = oldText.isEmpty ? [] : oldText.components(separatedBy: .newlines)
         let newLines = newText.isEmpty ? [] : newText.components(separatedBy: .newlines)
 

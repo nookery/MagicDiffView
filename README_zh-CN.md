@@ -68,8 +68,7 @@ struct GitDiffView: View {
     """
 
     var body: some View {
-        let diffLines = MyersDiffAlgorithm.parseUnifiedDiffSafely(gitDiffOutput)
-        return MagicDiffView(diffLines: diffLines)
+        MagicDiffView(diffOutput: gitDiffOutput)
     }
 }
 ```
