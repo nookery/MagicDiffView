@@ -167,7 +167,9 @@ final class SyntaxHighlighterTests: XCTestCase {
         let rules = CodeLanguage.swift.rules
 
         // 验证关键字高亮规则存在
-        let keywordRule = rules.first { $0.pattern.contains("\\bclass\\b") && $0.pattern.contains("\\bfunc\\b") }
+        // Swift 关键字规则使用 \b(class|struct|...|func|...)\b 格式
+        // 查找包含 class 和 func 的紫色规则
+        let keywordRule = rules.first { $0.pattern.contains("class") && $0.pattern.contains("func") && $0.color == .purple }
         XCTAssertNotNil(keywordRule, "Swift should have keyword highlighting rule")
 
         // 验证关键字规则的样式
