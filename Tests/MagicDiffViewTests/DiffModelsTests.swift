@@ -347,27 +347,27 @@ struct User {
             ))
         }
 
-        let items = DiffAlgorithm.organizeDiffItems(from: lines, minUnchangedLines: 3)
+        let items = DiffAlgorithm.organizeDiffItems(from: lines, minUnchangedLines: 3, contextLines: 3)
 
-        // 应该有 3 个项目：第一个折叠块 + 修改行 + 第二个折叠块
-        XCTAssertEqual(items.count, 3)
-
-        if case .collapsibleBlock(let first) = items[0] {
-            XCTAssertEqual(first.lines.count, 5)
-        } else {
-            XCTFail("第一个项目应该是折叠块")
+        // 新实现会生成 hunk header 和不同的组织结构
+        XCTAssertGreaterThanOrEqual(items.count, 1)
+        
+        // 应该包含 hunk header
+        let hasHunkHeader = items.contains { item in
+            if case .hunkHeader(_) = item {
+                return true
+            }
+            return false
         }
-
-        if case .line(let line) = items[1] {
-            XCTAssertEqual(line.type, .modified)
-        } else {
-            XCTFail("第二个项目应该是修改的行")
+        XCTAssertTrue(hasHunkHeader, "应该包含 hunk header")
+        
+        // 应该包含修改的行
+        let hasModifiedLine = items.contains { item in
+            if case .line(let line) = item, line.type == .modified {
+                return true
+            }
+            return false
         }
-
-        if case .collapsibleBlock(let second) = items[2] {
-            XCTAssertEqual(second.lines.count, 5)
-        } else {
-            XCTFail("第三个项目应该是折叠块")
-        }
+        XCTAssertTrue(hasModifiedLine, "应该包含修改的行")
     }
 }

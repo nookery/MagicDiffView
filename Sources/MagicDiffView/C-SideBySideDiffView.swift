@@ -57,71 +57,93 @@ struct SideBySideDiffView: View {
 
     // MARK: - Line View
 
+    @ViewBuilder
     private func sideBySideLineView(item: SideBySideItem, side: Side) -> some View {
-        let content: String
-        let lineNumber: String?
-        let lineType: DiffType
+        let content = content(for: item, side: side)
+        let lineNumber = lineNumber(for: item, side: side)
+        let lineType = lineType(for: item, side: side)
 
-        switch side {
-        case .old:
-            content = item.oldContent
-            lineNumber = item.oldLineNumber
-            lineType = item.oldType
-        case .new:
-            content = item.newContent
-            lineNumber = item.newLineNumber
-            lineType = item.newType
-        }
-
-        // 背景色
-        let backgroundColor: Color = {
-            switch lineType {
-            case .unchanged:
-                return theme.unchangedBackground
-            case .added:
-                return theme.addedBackground
-            case .removed:
-                return theme.removedBackground
-            case .modified:
-                return theme.modifiedBackground
-            }
-        }()
-
-        // 文字色
-        let textColor: Color = {
-            switch lineType {
-            case .unchanged:
-                return theme.unchangedTextColor
-            case .added:
-                return theme.addedTextColor
-            case .removed:
-                return theme.removedTextColor
-            case .modified:
-                return theme.modifiedTextColor
-            }
-        }()
-
-        return HStack(spacing: 0) {
-            // 行号
-            if showLineNumbers {
-                Text(lineNumber ?? "")
-                    .font(font)
+        // Hunk Header 行特殊渲染
+        if item.isHunkHeader {
+            HStack(spacing: 0) {
+                Text(content)
+                    .font(.system(.caption, design: .monospaced))
                     .foregroundColor(theme.lineNumberColor)
-                    .frame(width: 44, alignment: .trailing)
-                    .padding(.trailing, 8)
-                    .background(theme.gutterBackground.opacity(0.5))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
             }
+            .frame(minHeight: 20)
+            .background(theme.highlightBackground)
+        } else {
+            let backgroundColor: Color = backgroundColor(for: lineType)
+            let textColor: Color = textColor(for: lineType)
 
-            // 内容
-            Text(content)
-                .font(font)
-                .foregroundColor(textColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
+            HStack(spacing: 0) {
+                // 行号
+                if showLineNumbers {
+                    Text(lineNumber ?? "")
+                        .font(font)
+                        .foregroundColor(theme.lineNumberColor)
+                        .frame(width: 44, alignment: .trailing)
+                        .padding(.trailing, 8)
+                        .background(theme.gutterBackground.opacity(0.5))
+                }
+
+                // 内容
+                Text(content)
+                    .font(font)
+                    .foregroundColor(textColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+            }
+            .frame(minHeight: 20)
+            .background(backgroundColor)
         }
-        .frame(minHeight: 20)
-        .background(backgroundColor)
+    }
+
+    // MARK: - Helper Methods for ViewBuilder
+
+    private func content(for item: SideBySideItem, side: Side) -> String {
+        switch side {
+        case .old: return item.oldContent
+        case .new: return item.newContent
+        }
+    }
+
+    private func lineNumber(for item: SideBySideItem, side: Side) -> String? {
+        switch side {
+        case .old: return item.oldLineNumber
+        case .new: return item.newLineNumber
+        }
+    }
+
+    private func lineType(for item: SideBySideItem, side: Side) -> DiffType {
+        switch side {
+        case .old: return item.oldType
+        case .new: return item.newType
+        }
+    }
+
+    // MARK: - Helper
+
+    private func backgroundColor(for type: DiffType) -> Color {
+        switch type {
+        case .unchanged: return theme.unchangedBackground
+        case .added: return theme.addedBackground
+        case .removed: return theme.removedBackground
+        case .modified: return theme.modifiedBackground
+        }
+    }
+
+    private func textColor(for type: DiffType) -> Color {
+        switch type {
+        case .unchanged: return theme.unchangedTextColor
+        case .added: return theme.addedTextColor
+        case .removed: return theme.removedTextColor
+        case .modified: return theme.modifiedTextColor
+        }
     }
 
     // MARK: - Data Preparation
@@ -136,7 +158,6 @@ struct SideBySideDiffView: View {
             switch item {
             case let .line(line):
                 if line.type == .unchanged {
-                    // 相同行：两边都显示
                     oldItems.append(SideBySideItem(
                         oldContent: line.content,
                         oldLineNumber: line.oldLineNumber.map { "\($0)" },
@@ -154,7 +175,6 @@ struct SideBySideDiffView: View {
                         newType: .unchanged
                     ))
                 } else if line.type == .removed {
-                    // 删除行：只在左侧显示
                     oldItems.append(SideBySideItem(
                         oldContent: line.content,
                         oldLineNumber: line.oldLineNumber.map { "\($0)" },
@@ -163,7 +183,6 @@ struct SideBySideDiffView: View {
                         newLineNumber: nil,
                         newType: .removed
                     ))
-                    // 右侧添加占位符
                     newItems.append(SideBySideItem(
                         oldContent: "",
                         oldLineNumber: nil,
@@ -173,8 +192,6 @@ struct SideBySideDiffView: View {
                         newType: .removed
                     ))
                 } else if line.type == .added {
-                    // 添加行：只在右侧显示
-                    // 左侧添加占位符
                     oldItems.append(SideBySideItem(
                         oldContent: "",
                         oldLineNumber: nil,
@@ -192,11 +209,29 @@ struct SideBySideDiffView: View {
                         newType: .added
                     ))
                 }
+            case let .hunkHeader(header):
+                let placeholder = header.toDiffLineRepresentation()
+                oldItems.append(SideBySideItem(
+                    oldContent: placeholder,
+                    oldLineNumber: nil,
+                    oldType: .unchanged,
+                    newContent: placeholder,
+                    newLineNumber: nil,
+                    newType: .unchanged,
+                    isHunkHeader: true
+                ))
+                newItems.append(SideBySideItem(
+                    oldContent: placeholder,
+                    oldLineNumber: nil,
+                    oldType: .unchanged,
+                    newContent: placeholder,
+                    newLineNumber: nil,
+                    newType: .unchanged,
+                    isHunkHeader: true
+                ))
             case let .collapsibleBlock(block):
                 if block.isCollapsed {
-                    // 折叠块：显示占位符
                     let placeholder = "--- \(block.lines.count) lines collapsed ---"
-
                     oldItems.append(SideBySideItem(
                         oldContent: placeholder,
                         oldLineNumber: "\(block.startLineNumber)",
@@ -214,7 +249,6 @@ struct SideBySideDiffView: View {
                         newType: .unchanged
                     ))
                 } else {
-                    // 展开的折叠块：逐行处理
                     for line in block.lines {
                         oldItems.append(SideBySideItem(
                             oldContent: line.content,
@@ -257,5 +291,16 @@ struct SideBySideDiffView: View {
         let newContent: String
         let newLineNumber: String?
         let newType: DiffType
+        let isHunkHeader: Bool
+
+        init(oldContent: String, oldLineNumber: String?, oldType: DiffType, newContent: String, newLineNumber: String?, newType: DiffType, isHunkHeader: Bool = false) {
+            self.oldContent = oldContent
+            self.oldLineNumber = oldLineNumber
+            self.oldType = oldType
+            self.newContent = newContent
+            self.newLineNumber = newLineNumber
+            self.newType = newType
+            self.isHunkHeader = isHunkHeader
+        }
     }
 }

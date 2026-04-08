@@ -88,54 +88,25 @@ struct DiffLineView: View {
 
 // MARK: - Private Helpers
 extension DiffLineView {
-    /// 内容视图
+    /// 内容视图（支持字符级高亮）
+    @ViewBuilder
     private var contentView: some View {
-        Group {
-            if !line.content.isEmpty {
-                if displayMode == .diff {
-                    switch line.type {
-                    case .added:
-                        SyntaxHighlighter.highlight(
-                            text: line.content,
-                            rules: codeLanguage.rules,
-                            highlightRanges: line.highlightRanges,
-                            highlightColor: theme.addedHighlightColor,
-                            verbose: verbose
-                        )
-                        .font(font)
-                        .foregroundColor(theme.addedTextColor)
-                        .padding(.leading, 4)
-                    case .removed:
-                        SyntaxHighlighter.highlight(
-                            text: line.content,
-                            rules: codeLanguage.rules,
-                            highlightRanges: line.highlightRanges,
-                            highlightColor: theme.removedHighlightColor,
-                            verbose: verbose
-                        )
-                        .font(font)
-                        .foregroundColor(theme.removedTextColor)
-                        .padding(.leading, 4)
-                    case .unchanged:
-                        SyntaxHighlighter.highlight(
-                            text: line.content,
-                            rules: codeLanguage.rules,
-                            verbose: verbose
-                        )
-                        .font(font)
-                        .foregroundColor(theme.unchangedTextColor)
-                        .padding(.leading, 4)
-                    case .modified:
-                        SyntaxHighlighter.highlight(
-                            text: line.content,
-                            rules: codeLanguage.rules,
-                            verbose: verbose
-                        )
-                        .font(font)
-                        .foregroundColor(theme.modifiedTextColor)
-                        .padding(.leading, 4)
-                    }
-                } else {
+        if !line.content.isEmpty {
+            if displayMode == .diff {
+                switch line.type {
+                case .added:
+                    highlightedContent(
+                        rules: codeLanguage.rules,
+                        textColor: theme.addedTextColor,
+                        charHighlightColor: theme.addedHighlightColor
+                    )
+                case .removed:
+                    highlightedContent(
+                        rules: codeLanguage.rules,
+                        textColor: theme.removedTextColor,
+                        charHighlightColor: theme.removedHighlightColor
+                    )
+                case .unchanged:
                     SyntaxHighlighter.highlight(
                         text: line.content,
                         rules: codeLanguage.rules,
@@ -144,16 +115,87 @@ extension DiffLineView {
                     .font(font)
                     .foregroundColor(theme.unchangedTextColor)
                     .padding(.leading, 4)
+                case .modified:
+                    highlightedContent(
+                        rules: codeLanguage.rules,
+                        textColor: theme.modifiedTextColor,
+                        charHighlightColor: theme.removedHighlightColor
+                    )
                 }
             } else {
-                Text("")
-                    .font(font)
-                    .padding(.leading, 4)
+                SyntaxHighlighter.highlight(
+                    text: line.content,
+                    rules: codeLanguage.rules,
+                    verbose: verbose
+                )
+                .font(font)
+                .foregroundColor(theme.unchangedTextColor)
+                .padding(.leading, 4)
             }
+        } else {
+            Text("")
+                .font(font)
+                .padding(.leading, 4)
         }
-        .frame(maxHeight: .infinity)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 2)
+    }
+
+    /// 带字符级高亮的内容视图
+    @ViewBuilder
+    private func highlightedContent(
+        rules: [SyntaxHighlighter.HighlightRule],
+        textColor: Color,
+        charHighlightColor: Color
+    ) -> some View {
+        if let charRanges = line.charHighlightRanges, !charRanges.isEmpty {
+            // 有字符级高亮范围：先渲染语法高亮文本，再叠加字符级高亮背景
+            Text(line.content)
+                .font(font)
+                .foregroundColor(textColor)
+                .padding(.leading, 4)
+                .overlay(alignment: .leading) {
+                    HStack(spacing: 0) {
+                        // 字符级高亮前的空白
+                        if let firstRange = charRanges.first, firstRange.location > 0 {
+                            Text(String(repeating: " ", count: firstRange.location))
+                                .font(font)
+                                .hidden()
+                                .frame(width: charWidth * CGFloat(firstRange.location))
+                        }
+                        // 字符级高亮部分
+                        ForEach(Array(charRanges.enumerated()), id: \.offset) { _, range in
+                            if range.location < line.content.count {
+                                let prefix = String(repeating: " ", count: range.location)
+                                let highlighted = String(line.content.prefix(range.location + range.length).dropFirst(range.location))
+                                Text(prefix + highlighted)
+                                    .font(font)
+                                    .hidden()
+                                    .frame(width: charWidth * CGFloat(range.length))
+                                    .padding(.vertical, 1)
+                                    .background(charHighlightColor.opacity(0.35))
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.leading, 4)
+                }
+        } else {
+            // 无字符级高亮：使用原有的语法高亮 + 行级高亮
+            SyntaxHighlighter.highlight(
+                text: line.content,
+                rules: rules,
+                highlightRanges: line.highlightRanges,
+                highlightColor: charHighlightColor,
+                verbose: verbose
+            )
+            .font(font)
+            .foregroundColor(textColor)
+            .padding(.leading, 4)
+        }
+    }
+
+    /// 单个等宽字符的大致宽度
+    private var charWidth: CGFloat {
+        7.22 // 近似值，monospaced font 下的平均字符宽度
     }
 
     /// 背景颜色
@@ -177,10 +219,10 @@ extension DiffLineView {
     func copyLine() {
         if !line.content.isEmpty {
             #if os(macOS)
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(line.content, forType: .string)
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(line.content, forType: .string)
             #else
-                UIPasteboard.general.string = line.content
+            UIPasteboard.general.string = line.content
             #endif
 
             if verbose {
@@ -192,10 +234,10 @@ extension DiffLineView {
     /// 复制内容
     func copyContent(_ content: String) {
         #if os(macOS)
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(content, forType: .string)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(content, forType: .string)
         #else
-            UIPasteboard.general.string = content
+        UIPasteboard.general.string = content
         #endif
 
         if verbose {
