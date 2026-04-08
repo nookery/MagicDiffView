@@ -66,6 +66,14 @@ public struct MagicDiffView: View {
     @State private var isInitialized: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
+    // Diff 计算结果缓存（避免在 body 中重复计算导致主线程阻塞）
+    @State private var cachedDiffItems: [DiffItem] = []
+    @State private var cachedOriginalItems: [DiffItem] = []
+    @State private var cachedModifiedItems: [DiffItem] = []
+    @State private var reconstructedOldText: String = ""
+    @State private var reconstructedNewText: String = ""
+    @State private var isDiffComputing: Bool = false
+
     // 当前主题（从 selectedTheme 计算）
     private var theme: any DiffTheme {
         selectedTheme.theme(for: colorScheme)
@@ -184,110 +192,178 @@ public struct MagicDiffView: View {
 
                 // 主要内容区域
                 Group {
-                    switch selectedView {
-                    case .diff:
-                        DiffContentView(
-                            diffItems: diffItems,
-                            showLineNumbers: showLineNumbers,
-                            font: font,
-                            selectedLanguage: language,
-                            displayMode: .diff,
-                            verbose: verbose,
-                            theme: theme
-                        )
-                    case .sideBySide:
-                        SideBySideDiffView(
-                            diffItems: diffItems,
-                            showLineNumbers: showLineNumbers,
-                            font: font,
-                            selectedLanguage: language,
-                            theme: theme,
-                            verbose: verbose
-                        )
-                    case .original:
-                        DiffContentView(
-                            diffItems: createDiffItemsFromText(oldText ?? reconstructedOldText),
-                            showLineNumbers: showLineNumbers,
-                            font: font,
-                            selectedLanguage: language,
-                            displayMode: .original,
-                            verbose: verbose,
-                            theme: theme
-                        )
-                    case .modified:
-                        DiffContentView(
-                            diffItems: createDiffItemsFromText(newText ?? reconstructedNewText),
-                            showLineNumbers: showLineNumbers,
-                            font: font,
-                            selectedLanguage: language,
-                            displayMode: .modified,
-                            verbose: verbose,
-                            theme: theme
-                        )
+                    if isDiffComputing && cachedDiffItems.isEmpty {
+                        // 首次计算中，显示轻量占位
+                        Color.clear
+                    } else {
+                        switch selectedView {
+                        case .diff:
+                            DiffContentView(
+                                diffItems: cachedDiffItems,
+                                showLineNumbers: showLineNumbers,
+                                font: font,
+                                selectedLanguage: language,
+                                displayMode: .diff,
+                                verbose: verbose,
+                                theme: theme
+                            )
+                        case .sideBySide:
+                            SideBySideDiffView(
+                                diffItems: cachedDiffItems,
+                                showLineNumbers: showLineNumbers,
+                                font: font,
+                                selectedLanguage: language,
+                                theme: theme,
+                                verbose: verbose
+                            )
+                        case .original:
+                            DiffContentView(
+                                diffItems: cachedOriginalItems,
+                                showLineNumbers: showLineNumbers,
+                                font: font,
+                                selectedLanguage: language,
+                                displayMode: .original,
+                                verbose: verbose,
+                                theme: theme
+                            )
+                        case .modified:
+                            DiffContentView(
+                                diffItems: cachedModifiedItems,
+                                showLineNumbers: showLineNumbers,
+                                font: font,
+                                selectedLanguage: language,
+                                displayMode: .modified,
+                                verbose: verbose,
+                                theme: theme
+                            )
+                        }
                     }
                 }
                 .background(theme.backgroundColor)
+                .animation(.easeInOut(duration: 0.15), value: isDiffComputing)
             }
 
             // 浮动提示消息
             CopyToast(copyState: copyState, message: copyMessage)
         }
+        .task(id: taskIdentity) {
+            await computeAllDiffItems()
+        }
     }
 
-    /// 从diffLines重建的原始文本（用于diffOutput模式）
-    private var reconstructedOldText: String {
-        guard let diffLines = self.diffLines else { return "" }
-        return diffLines.compactMap { line in
-            switch line.type {
-            case .unchanged, .removed:
-                return line.content
-            case .added, .modified:
-                return nil
-            }
-        }.joined(separator: "\n")
+    /// 用于触发 task 重新计算的标识，当文本内容或折叠配置变化时自动更新
+    private var taskIdentity: String {
+        "\(oldText ?? "")\n---SEPARATOR---\n\(newText ?? "")\n---SEPARATOR---\n\(diffOutput ?? "")\n---SEPARATOR---\n\(enableCollapsing)\n---SEPARATOR---\n\(minUnchangedLines)"
     }
 
-    /// 从diffLines重建的新文本（用于diffOutput模式）
-    private var reconstructedNewText: String {
-        guard let diffLines = self.diffLines else { return "" }
-        return diffLines.compactMap { line in
-            switch line.type {
-            case .unchanged, .added:
-                return line.content
-            case .removed, .modified:
-                return nil
-            }
-        }.joined(separator: "\n")
+    /// 异步计算所有 DiffItem 并缓存结果，避免在 body 中同步执行重计算阻塞主线程
+    private func computeAllDiffItems() async {
+        isDiffComputing = true
+
+        // 将重计算放到后台线程，避免阻塞 UI
+        let oldText = self.oldText
+        let newText = self.newText
+        let diffLines = self.diffLines
+        let enableCollapsing = self.enableCollapsing
+        let minUnchangedLines = self.minUnchangedLines
+
+        let (items, computedOldText, computedNewText, originalItems, modifiedItems) = await Task.detached(priority: .userInitiated) {
+            // 计算在后台线程执行
+            return Self.computeDiffItemsInBackground(
+                oldText: oldText,
+                newText: newText,
+                diffLines: diffLines,
+                enableCollapsing: enableCollapsing,
+                minUnchangedLines: minUnchangedLines
+            )
+        }.value
+
+        // 回到主线程更新缓存
+        self.cachedDiffItems = items
+        self.reconstructedOldText = computedOldText
+        self.reconstructedNewText = computedNewText
+        self.cachedOriginalItems = originalItems
+        self.cachedModifiedItems = modifiedItems
+        self.isDiffComputing = false
+
+        if verbose {
+            os_log("✅ Diff 异步计算完成，差异项目数: \(items.count)")
+        }
     }
 
-    /// 计算差异项目（包含折叠块）
-    private var diffItems: [DiffItem] {
-        // 如果有预解析的diffLines，直接使用
-        if let diffLines = self.diffLines {
+    /// 在后台线程执行所有重计算（nonisolated 纯计算，不涉及 UI）
+    nonisolated private static func computeDiffItemsInBackground(
+        oldText: String?,
+        newText: String?,
+        diffLines: [DiffLine]?,
+        enableCollapsing: Bool,
+        minUnchangedLines: Int
+    ) -> (diffItems: [DiffItem], oldText: String, newText: String, originalItems: [DiffItem], modifiedItems: [DiffItem]) {
+        var computedDiffItems: [DiffItem] = []
+        var computedOldText: String = oldText ?? ""
+        var computedNewText: String = newText ?? ""
+
+        // 如果有预解析的 diffLines，直接使用
+        if let diffLines = diffLines {
             if enableCollapsing {
-                return DiffAlgorithm.organizeDiffItems(from: diffLines, minUnchangedLines: minUnchangedLines)
+                computedDiffItems = DiffAlgorithm.organizeDiffItems(from: diffLines, minUnchangedLines: minUnchangedLines)
             } else {
-                // 不启用折叠时，将所有行转换为普通行项目
-                return diffLines.map { .line($0) }
+                computedDiffItems = diffLines.map { .line($0) }
+            }
+
+            // 重建旧文本和新文本（用于 diffOutput 模式）
+            computedOldText = diffLines.compactMap { line in
+                switch line.type {
+                case .unchanged, .removed: return line.content
+                case .added, .modified: return nil
+                }
+            }.joined(separator: "\n")
+
+            computedNewText = diffLines.compactMap { line in
+                switch line.type {
+                case .unchanged, .added: return line.content
+                case .removed, .modified: return nil
+                }
+            }.joined(separator: "\n")
+        } else {
+            // 处理 oldText/newText 模式
+            guard let old = oldText, let new = newText else {
+                return ([], "", "", [], [])
+            }
+
+            computedOldText = old
+            computedNewText = new
+
+            let oldLines = old.isEmpty ? [] : old.components(separatedBy: .newlines)
+            let newLines = new.isEmpty ? [] : new.components(separatedBy: .newlines)
+
+            let lines = DiffAlgorithm.computeDiff(oldLines: oldLines, newLines: newLines)
+
+            if enableCollapsing {
+                computedDiffItems = DiffAlgorithm.organizeDiffItems(from: lines, minUnchangedLines: minUnchangedLines)
+            } else {
+                computedDiffItems = lines.map { .line($0) }
             }
         }
 
-        // 处理空文本的情况，避免返回包含空字符串的数组
-        guard let oldText = oldText, let newText = newText else {
-            return []
-        }
+        // 预计算 original 和 modified 视图的 DiffItems
+        let originalItems = Self.createDiffItemsFromTextStatic(computedOldText)
+        let modifiedItems = Self.createDiffItemsFromTextStatic(computedNewText)
 
-        let oldLines = oldText.isEmpty ? [] : oldText.components(separatedBy: .newlines)
-        let newLines = newText.isEmpty ? [] : newText.components(separatedBy: .newlines)
+        return (computedDiffItems, computedOldText, computedNewText, originalItems, modifiedItems)
+    }
 
-        let diffLines = DiffAlgorithm.computeDiff(oldLines: oldLines, newLines: newLines)
-
-        if enableCollapsing {
-            return DiffAlgorithm.organizeDiffItems(from: diffLines, minUnchangedLines: minUnchangedLines)
-        } else {
-            // 不启用折叠时，将所有行转换为普通行项目
-            return diffLines.map { .line($0) }
-        }
+    /// 纯文本转 DiffItem（静态版本，可在后台线程调用）
+    nonisolated private static func createDiffItemsFromTextStatic(_ text: String) -> [DiffItem] {
+        let lines = text.isEmpty ? [] : text.components(separatedBy: .newlines)
+        return lines.enumerated().map { index, content in
+            DiffLine(
+                content: content,
+                type: .unchanged,
+                oldLineNumber: index + 1,
+                newLineNumber: index + 1
+            )
+        }.map { DiffItem.line($0) }
     }
 
     /// 复制文本到剪贴板
@@ -334,21 +410,5 @@ public struct MagicDiffView: View {
         }
     }
 
-    /// 将纯文本转换为DiffItem数组
-    private func createDiffItemsFromText(_ text: String) -> [DiffItem] {
-        let lines = text.isEmpty ? [] : text.components(separatedBy: .newlines)
-        if verbose {
-            os_log("创建纯文本差异项目，行数: \(lines.count)")
-        }
-        return lines.enumerated().map { index, content in
-            let diffLine = DiffLine(
-                content: content,
-                type: .unchanged,
-                oldLineNumber: index + 1,
-                newLineNumber: index + 1
-            )
-            return DiffItem.line(diffLine)
-        }
-    }
 }
 
