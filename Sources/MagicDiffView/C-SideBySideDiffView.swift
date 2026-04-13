@@ -73,6 +73,7 @@ struct SideBySideDiffView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .frame(minHeight: 20)
             .background(theme.highlightBackground)
         } else {
@@ -98,6 +99,7 @@ struct SideBySideDiffView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .frame(minHeight: 20)
             .background(backgroundColor)
         }

@@ -62,6 +62,7 @@ struct DiffLineView: View {
 
             contentView
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(backgroundColor)
         #if os(macOS)
             .onHover { hovering in
