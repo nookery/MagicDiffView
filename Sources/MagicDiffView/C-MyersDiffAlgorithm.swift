@@ -84,16 +84,24 @@ struct MyersDiffAlgorithm {
 
             // 解析 hunk 头部：@@ -oldStart,oldCount +newStart,newCount @@
             if line.hasPrefix("@@") {
-                if let range = line.range(of: "-(\\d+)", options: .regularExpression),
-                   let newRange = line.range(of: "\\+(\\d+)", options: .regularExpression) {
-                    let oldStartStr = line[range].dropFirst()
-                    let newStartStr = line[newRange].dropFirst()
-
-                    if let oldStart = Int(oldStartStr),
-                       let newStart = Int(newStartStr) {
+                // 使用更精确的正则表达式解析 hunk header
+                let hunkPattern = "@@\\s*-(\\d+)(?:,(\\d+))?\\s*\\+(\\d+)(?:,(\\d+))?\\s*@@.*"
+                if let regex = try? NSRegularExpression(pattern: hunkPattern),
+                   let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
+                    
+                    // 提取 oldStart（group 1）
+                    if let oldStartRange = Range(match.range(at: 1), in: line),
+                       let oldStart = Int(String(line[oldStartRange])) {
                         oldLineNumber = oldStart
+                    }
+                    
+                    // 提取 newStart（group 3）
+                    if let newStartRange = Range(match.range(at: 3), in: line),
+                       let newStart = Int(String(line[newStartRange])) {
                         newLineNumber = newStart
                     }
+                    
+                    // oldCount 和 newCount 可用于验证，但行号递增由实际内容决定
                 }
                 i += 1
                 continue

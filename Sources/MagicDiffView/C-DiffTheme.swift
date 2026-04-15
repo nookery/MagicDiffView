@@ -125,8 +125,8 @@ public enum DiffThemes {
         lineNumberColor: .secondary.opacity(0.8),
         separatorColor: Color.secondary.opacity(0.15),
         highlightBackground: .clear,
-        addedHighlightColor: Color.green.opacity(0.3),
-        removedHighlightColor: Color.red.opacity(0.3)
+        addedHighlightColor: Color.green.opacity(0.5),
+        removedHighlightColor: Color.red.opacity(0.5)
     )
 
     /// 深色主题
@@ -165,8 +165,8 @@ public enum DiffThemes {
         lineNumberColor: Color(hex: "656d76"),
         separatorColor: Color(hex: "d1d9e0"),
         highlightBackground: .clear,
-        addedHighlightColor: Color(hex: "55a532").opacity(0.3),
-        removedHighlightColor: Color(hex: "bd2c00").opacity(0.3)
+        addedHighlightColor: Color(hex: "55a532").opacity(0.5),
+        removedHighlightColor: Color(hex: "bd2c00").opacity(0.5)
     )
 
     /// VS Code 风格主题
@@ -185,8 +185,8 @@ public enum DiffThemes {
         lineNumberColor: Color(hex: "858585"),
         separatorColor: Color(hex: "454545"),
         highlightBackground: Color(hex: "264f78").opacity(0.4),
-        addedHighlightColor: Color(hex: "4ec9b0").opacity(0.3),
-        removedHighlightColor: Color(hex: "f44747").opacity(0.3)
+        addedHighlightColor: Color(hex: "4ec9b0").opacity(0.5),
+        removedHighlightColor: Color(hex: "f44747").opacity(0.5)
     )
 
     /// 高对比度主题

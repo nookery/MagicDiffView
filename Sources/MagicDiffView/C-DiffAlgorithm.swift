@@ -160,11 +160,12 @@ struct DiffAlgorithm {
             let leadingContext = Array(diffLines[leadingStart..<changeStart])
 
             // 计算 hunk header 的行号范围
+            // 参考 Git 的 unified diff 格式：
+            // oldCount = 未变动行数 + 删除行数（旧文件中的行总数）
+            // newCount = 未变动行数 + 新增行数（新文件中的行总数）
+            let oldCount = leadingContext.count + changedLines.filter { $0.type != .added }.count + trailingContext.count
+            let newCount = leadingContext.count + changedLines.filter { $0.type != .removed }.count + trailingContext.count
             let allLines = leadingContext + changedLines + trailingContext
-            let oldStart = allLines.first?.oldLineNumber ?? 1
-            let newStart = allLines.first?.newLineNumber ?? 1
-            let oldCount = allLines.count
-            let newCount = allLines.count
 
             // 多余的上下文行（前导之前的行）
             let extraContextBefore: [DiffLine] = leadingStart > 0

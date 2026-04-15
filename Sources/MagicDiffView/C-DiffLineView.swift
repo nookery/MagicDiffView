@@ -141,6 +141,7 @@ extension DiffLineView {
     }
 
     /// 带字符级高亮的内容视图
+    /// 参考 GitHub Desktop 的行内差异渲染
     @ViewBuilder
     private func highlightedContent(
         rules: [SyntaxHighlighter.HighlightRule],
@@ -148,37 +149,12 @@ extension DiffLineView {
         charHighlightColor: Color
     ) -> some View {
         if let charRanges = line.charHighlightRanges, !charRanges.isEmpty {
-            // 有字符级高亮范围：先渲染语法高亮文本，再叠加字符级高亮背景
-            Text(line.content)
-                .font(font)
-                .foregroundColor(textColor)
-                .padding(.leading, 4)
-                .overlay(alignment: .leading) {
-                    HStack(spacing: 0) {
-                        // 字符级高亮前的空白
-                        if let firstRange = charRanges.first, firstRange.location > 0 {
-                            Text(String(repeating: " ", count: firstRange.location))
-                                .font(font)
-                                .hidden()
-                                .frame(width: charWidth * CGFloat(firstRange.location))
-                        }
-                        // 字符级高亮部分
-                        ForEach(Array(charRanges.enumerated()), id: \.offset) { _, range in
-                            if range.location < line.content.count {
-                                let prefix = String(repeating: " ", count: range.location)
-                                let highlighted = String(line.content.prefix(range.location + range.length).dropFirst(range.location))
-                                Text(prefix + highlighted)
-                                    .font(font)
-                                    .hidden()
-                                    .frame(width: charWidth * CGFloat(range.length))
-                                    .padding(.vertical, 1)
-                                    .background(charHighlightColor.opacity(0.35))
-                            }
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.leading, 4)
-                }
+            // 使用 AttributedString 精确渲染字符级高亮
+            Text(buildCharHighlightedAttributedString(
+                textColor: textColor,
+                charHighlightColor: charHighlightColor
+            ))
+            .padding(.leading, 4)
         } else {
             // 无字符级高亮：使用原有的语法高亮 + 行级高亮
             SyntaxHighlighter.highlight(
@@ -194,9 +170,33 @@ extension DiffLineView {
         }
     }
 
-    /// 单个等宽字符的大致宽度
-    private var charWidth: CGFloat {
-        7.22 // 近似值，monospaced font 下的平均字符宽度
+    /// 构建带字符级高亮的 AttributedString
+    private func buildCharHighlightedAttributedString(
+        textColor: Color,
+        charHighlightColor: Color
+    ) -> AttributedString {
+        guard let charRanges = line.charHighlightRanges, !charRanges.isEmpty else {
+            var attrString = AttributedString(line.content)
+            attrString.font = font
+            attrString.foregroundColor = textColor
+            return attrString
+        }
+        
+        var attrString = AttributedString(line.content)
+        attrString.font = font
+        attrString.foregroundColor = textColor
+
+        // 按位置排序范围，避免重叠问题
+        let sortedRanges = charRanges.sorted { $0.location < $1.location }
+
+        for range in sortedRanges where range.length > 0 {
+            let startIdx = attrString.index(attrString.startIndex, offsetByCharacters: range.location)
+            let endIdx = attrString.index(startIdx, offsetByCharacters: range.length)
+            // 设置高亮背景色（直接使用主题颜色，透明度已由主题定义）
+            attrString[startIdx..<endIdx].backgroundColor = charHighlightColor
+        }
+
+        return attrString
     }
 
     /// 背景颜色
