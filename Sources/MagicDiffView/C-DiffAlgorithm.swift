@@ -1,69 +1,49 @@
 import Foundation
 
 /// 差异计算算法
-///
-/// 使用 Myers 算法（Eugene Myers, 1986）计算文本差异
-///
-/// 算法特点：
-/// - 时间复杂度：O((m+n)×D)，其中 m、n 为行数，D 为编辑距离
-/// - 空间复杂度：O(m+n)
-/// - 适合大文件处理，性能优异
-/// - 业界标准算法（Git、GitHub Desktop、VS Code 均使用）
+/// 核心改进：采用"区间合并"策略，与 GitHub Desktop 和 Git 的行为完全一致。
 struct DiffAlgorithm {
 
-    /// 默认每次扩展的行数，与 GitHub Desktop 一致
     static let defaultExpansionStep = 20
 
-    /// 计算两个字符串数组的差异
-    /// - Parameters:
-    ///   - oldLines: 旧文本的行数组
-    ///   - newLines: 新文本的行数组
-    /// - Returns: 差异行数组
     static func computeDiff(oldLines: [String], newLines: [String]) -> [DiffLine] {
-        // 使用 Myers 算法
         return MyersDiffAlgorithm.computeDiff(oldLines: oldLines, newLines: newLines)
     }
 
-    /// 将差异行组织成可折叠的项目，并在变更块前后添加 hunk header
-    ///
-    /// 参考 GitHub Desktop 的渲染方式：
-    /// - 变更块之前显示若干行上下文（context lines）
-    /// - 变更块以 hunk header（@@ -x,y +a,b @@）分隔
-    /// - 上下文行数较多的间隙以折叠块呈现，支持展开
-    ///
-    /// - Parameters:
-    ///   - diffLines: 原始差异行数组
-    ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
-    ///   - contextLines: 变更块前后保留的上下文行数，默认为3行（与 Git 一致）
-    /// - Returns: 包含 hunk header、折叠块的差异项目数组
     static func organizeDiffItems(
         from diffLines: [DiffLine],
         minUnchangedLines: Int = 3,
         contextLines: Int = 3
     ) -> [DiffItem] {
         var result: [DiffItem] = []
-
-        // 第一步：将行按变更分组
-        // 每个 group 包含：前导上下文 + 变更行 + 尾随上下文
+        
+        // 1. 使用新的分组算法
         let groups = groupDiffLines(diffLines, contextLines: contextLines)
 
         for (index, group) in groups.enumerated() {
-            // 添加 hunk header
-            result.append(.hunkHeader(group.header))
+            // 计算 hunk 的扩展类型（参考 GitHub Desktop）
+            let expansionType = computeExpansionType(
+                for: group,
+                at: index,
+                totalGroups: groups.count,
+                allDiffLines: diffLines,
+                groups: groups
+            )
+            
+            result.append(.hunkHeader(group.header, expansionType: expansionType))
 
-            // 添加前导上下文行
+            // 前导上下文
             for line in group.leadingContext {
                 result.append(.line(line))
             }
 
-            // 添加变更行（添加字符级高亮）
+            // 变更行（添加字符级高亮）
             let (deleted, added) = separateAddedAndDeleted(group.changedLines)
             let (deletedHighlighted, addedHighlighted) = InlineDiff.computeCharHighlightRanges(
                 deletedLines: deleted,
                 addedLines: added
             )
 
-            // 交替输出 deleted 和 added（保持原始顺序）
             var delIdx = 0
             var addIdx = 0
             for line in group.changedLines {
@@ -82,171 +62,197 @@ struct DiffAlgorithm {
                         result.append(.line(line))
                     }
                 } else {
+                    // 内部未变动行（合并后的变更块中间的上下文）
                     result.append(.line(line))
                 }
             }
 
-            // 添加尾随上下文行
+            // 尾随上下文
             for line in group.trailingContext {
                 result.append(.line(line))
             }
 
-            // 在非末尾的 group 之间添加折叠块（如果存在多余上下文行）
+            // 折叠块（hunk 之间的空白区域）
             if index < groups.count - 1 {
-                let nextGroup = groups[index + 1]
-                let gapLines = nextGroup.extraContextBefore
-
-                if gapLines.count > 0 {
-                    let expansionType = getExpansionType(
-                        gapLineCount: gapLines.count,
-                        isFirstGroup: false,
-                        isLastGroup: false
-                    )
+                let gapLines = group.extraContextBefore
+                if !gapLines.isEmpty {
                     let startLine = gapLines.first?.oldLineNumber ?? 1
                     let endLine = gapLines.last?.oldLineNumber ?? startLine
-
+                    let gap = endLine - startLine + 1
                     let block = CollapsibleBlock(
                         lines: gapLines,
                         isCollapsed: true,
                         startLineNumber: startLine,
                         endLineNumber: endLine,
                         contextInfo: "@@ -\(startLine),\(gapLines.count) +\(startLine),\(gapLines.count) @@",
-                        expansionType: expansionType,
-                        hiddenLineCount: 0
+                        expansionType: gap <= defaultExpansionStep ? .short : .both,
+                        hiddenLineCount: gapLines.count
                     )
                     result.append(.collapsibleBlock(block))
                 }
             }
         }
-
         return result
     }
 
-    /// 将差异行分组为变更块
-    private static func groupDiffLines(
-        _ diffLines: [DiffLine],
-        contextLines: Int
-    ) -> [DiffGroup] {
-        var groups: [DiffGroup] = []
+    /// 计算 Hunk 的扩展类型（参考 GitHub Desktop 的逻辑）
+    private static func computeExpansionType(
+        for group: DiffGroup,
+        at index: Int,
+        totalGroups: Int,
+        allDiffLines: [DiffLine],
+        groups: [DiffGroup]
+    ) -> HunkExpansionType {
+        // 只有一个 hunk，无法扩展
+        if totalGroups == 1 {
+            return .none
+        }
+
+        // 计算该 hunk 上方和下方的空白行数
+        let hasGapAbove = index > 0 && !groups[index - 1].extraContextBefore.isEmpty
+        let hasGapBelow = index < totalGroups - 1 && !group.extraContextBefore.isEmpty
+
+        // 第一个 hunk
+        if index == 0 {
+            return hasGapBelow ? .down : .none
+        }
+
+        // 最后一个 hunk
+        if index == totalGroups - 1 {
+            return hasGapAbove ? .up : .none
+        }
+
+        // 中间的 hunk
+        if hasGapAbove && hasGapBelow {
+            return .both
+        } else if hasGapAbove {
+            return .up
+        } else if hasGapBelow {
+            return .down
+        }
+
+        return .none
+    }
+
+    /// 核心修复：区间合并分组算法
+    /// 逻辑：
+    /// 1. 找到所有变更簇。
+    /// 2. 向两侧扩展上下文。
+    /// 3. 合并重叠或相邻的区间（解决分块过细和重复显示问题）。
+    private static func groupDiffLines(_ diffLines: [DiffLine], contextLines: Int) -> [DiffGroup] {
+        if diffLines.isEmpty { return [] }
+
+        // 1. 找到变更簇的索引范围
+        var clusters: [(start: Int, end: Int)] = []
         var i = 0
-
         while i < diffLines.count {
-            // 找到下一个变更行
-            var changeStart = i
-            while changeStart < diffLines.count && diffLines[changeStart].type == .unchanged {
-                changeStart += 1
-            }
-
-            if changeStart >= diffLines.count { break }
-
-            // 收集变更行
-            var changeEnd = changeStart
-            while changeEnd < diffLines.count && diffLines[changeEnd].type != .unchanged {
-                changeEnd += 1
-            }
-
-            // 收集变更行
-            let changedLines = Array(diffLines[changeStart..<changeEnd])
-
-            // 收集尾随上下文行
-            var trailingEnd = changeEnd
-            while trailingEnd < diffLines.count && diffLines[trailingEnd].type == .unchanged && (trailingEnd - changeEnd) < contextLines {
-                trailingEnd += 1
-            }
-            let trailingContext = Array(diffLines[changeEnd..<trailingEnd])
-
-            // 收集前导上下文行
-            let leadingStart = max(0, changeStart - contextLines)
-            let leadingContext = Array(diffLines[leadingStart..<changeStart])
-
-            // 计算 hunk header 的行号范围
-            // 参考 Git 的 unified diff 格式：
-            // oldCount = 未变动行数 + 删除行数（旧文件中的行总数）
-            // newCount = 未变动行数 + 新增行数（新文件中的行总数）
-            let oldCount = leadingContext.count + changedLines.filter { $0.type != .added }.count + trailingContext.count
-            let newCount = leadingContext.count + changedLines.filter { $0.type != .removed }.count + trailingContext.count
-            let allLines = leadingContext + changedLines + trailingContext
-
-            // 多余的上下文行（前导之前的行）
-            let extraContextBefore: [DiffLine] = leadingStart > 0
-                ? Array(diffLines[max(0, changeStart - contextLines * 3)...leadingStart].filter { $0.type == .unchanged })
-                : []
-
-            // 检查前面是否有未被消费的上下文行
-            let fullLeadingStart: Int
-            if groups.isEmpty {
-                // 第一个 group，前导上下文之前的行也属于它
-                fullLeadingStart = max(0, changeStart - contextLines)
+            if diffLines[i].type != .unchanged {
+                let start = i
+                while i < diffLines.count && diffLines[i].type != .unchanged {
+                    i += 1
+                }
+                clusters.append((start: start, end: i))
             } else {
-                fullLeadingStart = leadingStart
+                i += 1
+            }
+        }
+        if clusters.isEmpty { return [] }
+
+        // 2. 扩展并合并区间
+        var mergedRanges: [(start: Int, end: Int)] = []
+
+        for cluster in clusters {
+            let expStart = max(0, cluster.start - contextLines)
+            let expEnd = min(diffLines.count, cluster.end + contextLines)
+
+            if var last = mergedRanges.popLast() {
+                // 如果重叠或相邻，则合并
+                if expStart <= last.end {
+                    last.end = max(last.end, expEnd)
+                    mergedRanges.append(last)
+                } else {
+                    mergedRanges.append(last)
+                    mergedRanges.append((expStart, expEnd))
+                }
+            } else {
+                mergedRanges.append((expStart, expEnd))
+            }
+        }
+
+        // 3. 构建 DiffGroup
+        var groups: [DiffGroup] = []
+
+        for (idx, range) in mergedRanges.enumerated() {
+            let lines = Array(diffLines[range.start..<range.end])
+
+            var leadingContext: [DiffLine] = []
+            var changedLines: [DiffLine] = []
+            var trailingContext: [DiffLine] = []
+
+            if let firstChangeIdx = lines.firstIndex(where: { $0.type != .unchanged }) {
+                leadingContext = Array(lines[..<firstChangeIdx])
+                if let lastChangeIdx = lines.lastIndex(where: { $0.type != .unchanged }) {
+                    changedLines = Array(lines[firstChangeIdx...lastChangeIdx])
+                    trailingContext = Array(lines[(lastChangeIdx + 1)...])
+                }
             }
 
-            let actualLeadingContext = fullLeadingStart < leadingStart
-                ? Array(diffLines[fullLeadingStart..<leadingStart])
-                : []
+            // 计算 Hunk Header 行号
+            let firstLine = lines.first!
+            let oldStart = firstLine.oldLineNumber ?? 1
+            // 修复：如果首行是删除行，回退到 oldLineNumber，避免出现错误的 `+1` 行号
+            let newStart = firstLine.newLineNumber ?? firstLine.oldLineNumber ?? 1
+
+            var oldCount = 0, newCount = 0
+            for line in lines {
+                switch line.type {
+                case .unchanged: oldCount += 1; newCount += 1
+                case .removed: oldCount += 1
+                case .added: newCount += 1
+                case .modified: oldCount += 1; newCount += 1
+                }
+            }
 
             let header = HunkHeader(
-                oldStartLine: allLines.first?.oldLineNumber ?? 1,
+                oldStartLine: oldStart,
                 oldLineCount: oldCount,
-                newStartLine: allLines.first?.newLineNumber ?? 1,
+                newStartLine: newStart,
                 newLineCount: newCount
             )
 
+            var extraContextBefore: [DiffLine] = []
+            if idx > 0 {
+                let prevRange = mergedRanges[idx - 1]
+                if range.start > prevRange.end {
+                    extraContextBefore = Array(diffLines[prevRange.end..<range.start])
+                }
+            }
+
             groups.append(DiffGroup(
                 header: header,
-                leadingContext: actualLeadingContext + leadingContext,
+                leadingContext: leadingContext,
                 changedLines: changedLines,
                 trailingContext: trailingContext,
-                extraContextBefore: groups.isEmpty && fullLeadingStart > 0
-                    ? Array(diffLines[0..<fullLeadingStart])
-                    : []
+                extraContextBefore: extraContextBefore
             ))
-
-            i = trailingEnd
         }
-
         return groups
     }
 
-    /// 根据 gap 行数判断扩展类型
-    /// 参考 GitHub Desktop 的 `getHunkHeaderExpansionType()`
-    private static func getExpansionType(gapLineCount: Int, isFirstGroup: Bool, isLastGroup: Bool) -> HunkExpansionType {
-        if gapLineCount <= defaultExpansionStep {
-            return .short
-        }
-        if isFirstGroup {
-            return .up
-        }
-        if isLastGroup {
-            return .down
-        }
-        return .both
-    }
-
-    /// 分离 deleted 和 added 行
     private static func separateAddedAndDeleted(_ lines: [DiffLine]) -> (deleted: [DiffLine], added: [DiffLine]) {
-        var deleted = [DiffLine]()
-        var added = [DiffLine]()
+        var del = [DiffLine](), add = [DiffLine]()
         for line in lines {
-            switch line.type {
-            case .removed:
-                deleted.append(line)
-            case .added:
-                added.append(line)
-            default:
-                break
-            }
+            if line.type == .removed { del.append(line) }
+            else if line.type == .added { add.append(line) }
         }
-        return (deleted, added)
+        return (del, add)
     }
 }
 
-/// 变更分组
 private struct DiffGroup {
     let header: HunkHeader
     let leadingContext: [DiffLine]
     let changedLines: [DiffLine]
     let trailingContext: [DiffLine]
-    /// 前导上下文之前的额外行（在折叠块中展示）
     let extraContextBefore: [DiffLine]
 }

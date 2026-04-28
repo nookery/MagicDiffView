@@ -111,8 +111,9 @@ public struct CollapsibleBlock {
 }
 
 /// 差异项目类型（可以是单行、hunk header 或折叠块）
-public enum DiffItem {
+/// 参考 GitHub Desktop：hunkHeader 带有扩展类型，支持点击展开/折叠上下文
+public enum DiffItem: Sendable {
     case line(DiffLine)
     case collapsibleBlock(CollapsibleBlock)
-    case hunkHeader(HunkHeader)
+    case hunkHeader(HunkHeader, expansionType: HunkExpansionType)
 }

@@ -56,13 +56,15 @@ struct DiffLineView: View {
             if showIndicator {
                 DiffLineIndicatorView(
                     line: line,
-                    font: font
+                    font: font,
+                    theme: theme
                 )
             }
 
             contentView
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 20) // GitHub Desktop 标准行高
         .background(backgroundColor)
         #if os(macOS)
             .onHover { hovering in
@@ -115,7 +117,6 @@ extension DiffLineView {
                     )
                     .font(font)
                     .foregroundColor(theme.unchangedTextColor)
-                    .padding(.leading, 4)
                 case .modified:
                     highlightedContent(
                         rules: codeLanguage.rules,
@@ -131,12 +132,10 @@ extension DiffLineView {
                 )
                 .font(font)
                 .foregroundColor(theme.unchangedTextColor)
-                .padding(.leading, 4)
             }
         } else {
             Text("")
                 .font(font)
-                .padding(.leading, 4)
         }
     }
 

@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// 差异视图中的行号区域视图
+/// GitHub Desktop 风格：始终显示双列（旧行号 | 新行号）
 struct DiffLineNumberView: View {
     let line: DiffLine
     let displayMode: ViewMode
@@ -20,12 +21,11 @@ struct DiffLineNumberView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        Group {
             switch displayMode {
             case .diff:
-                lineNumberText(line.oldLineNumber, color: theme.lineNumberColor)
-                separatorLine()
-                lineNumberText(line.newLineNumber, color: theme.lineNumberColor)
+                // GitHub Desktop 风格：始终显示双列
+                diffModeLineNumbers
             case .sideBySide:
                 // 并排视图不使用此组件
                 EmptyView()
@@ -38,21 +38,48 @@ struct DiffLineNumberView: View {
         .padding(.horizontal, 0)
         .background(gutterBackgroundColor)
         .frame(maxHeight: .infinity)
-        // 在行号区域右侧添加垂直分割线，分隔行号和代码内容区域
         .overlay(
             separatorLine(),
-            alignment: .trailing  // 对齐到行号区域右侧
+            alignment: .trailing
         )
     }
 
-    /// 创建统一的垂直分割线
+    /// 统一 diff 模式的双列行号（GitHub Desktop 风格）
+    private var diffModeLineNumbers: some View {
+        HStack(spacing: 0) {
+            // 旧行号列（删除行显示，新增行为空）
+            if line.type == .removed || line.type == .unchanged || line.type == .modified {
+                lineNumberText(line.oldLineNumber, color: theme.lineNumberColor)
+            } else {
+                // 新增行：旧行号列为空
+                Text(" ")
+                    .font(font)
+                    .frame(width: 36, alignment: .trailing)
+                    .padding(.horizontal, 4)
+            }
+            
+            // 中间分割线
+            separatorLine()
+            
+            // 新行号列（新增行显示，删除行为空）
+            if line.type == .added || line.type == .unchanged || line.type == .modified {
+                lineNumberText(line.newLineNumber, color: theme.lineNumberColor)
+            } else {
+                // 删除行：新行号列为空
+                Text(" ")
+                    .font(font)
+                    .frame(width: 36, alignment: .trailing)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
     private func separatorLine() -> some View {
         Rectangle()
             .frame(width: 1)
             .foregroundColor(theme.separatorColor)
     }
 
-    /// 生成行号文本视图
     private func lineNumberText(_ number: Int?, color: Color) -> some View {
         Text(number.map(String.init) ?? "")
             .font(font)
@@ -61,17 +88,9 @@ struct DiffLineNumberView: View {
             .padding(.horizontal, 4)
     }
 
-    /// 行号区域背景颜色
     private var gutterBackgroundColor: Color {
-        switch line.type {
-        case .added:
-            return theme.addedBackground.opacity(0.5) // 行号区域使用更淡的背景色
-        case .removed:
-            return theme.removedBackground.opacity(0.5)
-        case .unchanged:
-            return theme.gutterBackground
-        case .modified:
-            return theme.modifiedBackground.opacity(0.5)
-        }
+        // GitHub Desktop 风格：行号区域始终使用统一的中性背景色
+        // 不随增删行变色，只有代码区和 +/- 符号区才会有红/绿背景
+        theme.gutterBackground
     }
 }

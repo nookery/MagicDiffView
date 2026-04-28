@@ -23,6 +23,9 @@ public protocol DiffTheme {
     /// 行号区域背景颜色
     var gutterBackground: Color { get }
 
+    /// Hunk Header 背景颜色（GitHub Desktop 蓝色风格）
+    var hunkHeaderBackground: Color { get }
+
     /// 未改变行的文字颜色
     var unchangedTextColor: Color { get }
 
@@ -60,6 +63,7 @@ public struct DefaultDiffTheme: DiffTheme {
     public let removedBackground: Color
     public let modifiedBackground: Color
     public let gutterBackground: Color
+    public let hunkHeaderBackground: Color
     public let unchangedTextColor: Color
     public let addedTextColor: Color
     public let removedTextColor: Color
@@ -78,6 +82,7 @@ public struct DefaultDiffTheme: DiffTheme {
         removedBackground: Color = Color.red.opacity(0.06),
         modifiedBackground: Color = Color.orange.opacity(0.06),
         gutterBackground: Color = .clear,
+        hunkHeaderBackground: Color? = nil,
         unchangedTextColor: Color = .primary,
         addedTextColor: Color = .primary,
         removedTextColor: Color = .primary,
@@ -95,6 +100,7 @@ public struct DefaultDiffTheme: DiffTheme {
         self.removedBackground = removedBackground
         self.modifiedBackground = modifiedBackground
         self.gutterBackground = gutterBackground
+        self.hunkHeaderBackground = hunkHeaderBackground ?? Color.blue.opacity(0.06)
         self.unchangedTextColor = unchangedTextColor
         self.addedTextColor = addedTextColor
         self.removedTextColor = removedTextColor
@@ -118,6 +124,7 @@ public enum DiffThemes {
         removedBackground: Color.red.opacity(0.06),
         modifiedBackground: Color.orange.opacity(0.06),
         gutterBackground: .clear,
+        hunkHeaderBackground: Color(hex: "edf2f8"),
         unchangedTextColor: .primary,
         addedTextColor: .primary,
         removedTextColor: .primary,
@@ -125,8 +132,8 @@ public enum DiffThemes {
         lineNumberColor: .secondary.opacity(0.8),
         separatorColor: Color.secondary.opacity(0.15),
         highlightBackground: .clear,
-        addedHighlightColor: Color.green.opacity(0.5),
-        removedHighlightColor: Color.red.opacity(0.5)
+        addedHighlightColor: Color.green.opacity(0.45),
+        removedHighlightColor: Color.red.opacity(0.45)
     )
 
     /// 深色主题
@@ -138,6 +145,7 @@ public enum DiffThemes {
         removedBackground: Color(hex: "3a1e1e").opacity(0.3),
         modifiedBackground: Color(hex: "3a2e1e").opacity(0.3),
         gutterBackground: Color(hex: "2d2d2d"),
+        hunkHeaderBackground: Color(hex: "264f78").opacity(0.3),
         unchangedTextColor: Color(hex: "cccccc"),
         addedTextColor: Color(hex: "cccccc"),
         removedTextColor: Color(hex: "cccccc"),

@@ -211,7 +211,7 @@ struct SideBySideDiffView: View {
                         newType: .added
                     ))
                 }
-            case let .hunkHeader(header):
+            case let .hunkHeader(header, _):
                 let placeholder = header.toDiffLineRepresentation()
                 oldItems.append(SideBySideItem(
                     oldContent: placeholder,

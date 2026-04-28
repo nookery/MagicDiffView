@@ -54,6 +54,7 @@ public struct MagicDiffView: View {
     let diffOutput: String?
     let diffLines: [DiffLine]?
     let showLineNumbers: Bool
+    let showCheckboxes: Bool
     let font: Font
     let enableCollapsing: Bool
     let minUnchangedLines: Int
@@ -88,6 +89,7 @@ public struct MagicDiffView: View {
     ///   - oldText: 原始文本
     ///   - newText: 新文本
     ///   - showLineNumbers: 是否显示行号，默认为 true
+    ///   - showCheckboxes: 是否显示复选框列（用于选择提交行），默认为 false
     ///   - font: 文本字体，默认为等宽字体
     ///   - enableCollapsing: 是否启用折叠功能，默认为 true
     ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
@@ -97,6 +99,7 @@ public struct MagicDiffView: View {
         oldText: String,
         newText: String,
         showLineNumbers: Bool = true,
+        showCheckboxes: Bool = false,
         font: Font = .system(.body, design: .monospaced),
         enableCollapsing: Bool = true,
         minUnchangedLines: Int = 3,
@@ -112,6 +115,7 @@ public struct MagicDiffView: View {
         self.diffOutput = nil
         self.diffLines = nil
         self.showLineNumbers = showLineNumbers
+        self.showCheckboxes = showCheckboxes
         self.font = font
         self.enableCollapsing = enableCollapsing
         self.minUnchangedLines = minUnchangedLines
@@ -128,6 +132,7 @@ public struct MagicDiffView: View {
     /// - Parameters:
     ///   - diffOutput: Git diff 格式的文本输出
     ///   - showLineNumbers: 是否显示行号，默认为 true
+    ///   - showCheckboxes: 是否显示复选框列（用于选择提交行），默认为 false
     ///   - font: 文本字体，默认为等宽字体
     ///   - enableCollapsing: 是否启用折叠功能，默认为 true
     ///   - minUnchangedLines: 最小未变动行数才会折叠，默认为3行
@@ -136,6 +141,7 @@ public struct MagicDiffView: View {
     public init(
         diffOutput: String,
         showLineNumbers: Bool = true,
+        showCheckboxes: Bool = false,
         font: Font = .system(.body, design: .monospaced),
         enableCollapsing: Bool = true,
         minUnchangedLines: Int = 3,
@@ -153,6 +159,7 @@ public struct MagicDiffView: View {
         self.diffOutput = diffOutput
         self.diffLines = parsedDiffLines
         self.showLineNumbers = showLineNumbers
+        self.showCheckboxes = showCheckboxes
         self.font = font
         self.enableCollapsing = enableCollapsing
         self.minUnchangedLines = minUnchangedLines
@@ -201,6 +208,7 @@ public struct MagicDiffView: View {
                             DiffContentView(
                                 diffItems: cachedDiffItems,
                                 showLineNumbers: showLineNumbers,
+                                showCheckboxes: showCheckboxes,
                                 font: font,
                                 selectedLanguage: language,
                                 displayMode: .diff,
@@ -220,6 +228,7 @@ public struct MagicDiffView: View {
                             DiffContentView(
                                 diffItems: cachedOriginalItems,
                                 showLineNumbers: showLineNumbers,
+                                showCheckboxes: showCheckboxes,
                                 font: font,
                                 selectedLanguage: language,
                                 displayMode: .original,
@@ -230,6 +239,7 @@ public struct MagicDiffView: View {
                             DiffContentView(
                                 diffItems: cachedModifiedItems,
                                 showLineNumbers: showLineNumbers,
+                                showCheckboxes: showCheckboxes,
                                 font: font,
                                 selectedLanguage: language,
                                 displayMode: .modified,
