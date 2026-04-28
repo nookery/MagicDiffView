@@ -89,8 +89,17 @@ struct DiffLineNumberView: View {
     }
 
     private var gutterBackgroundColor: Color {
-        // GitHub Desktop 风格：行号区域始终使用统一的中性背景色
-        // 不随增删行变色，只有代码区和 +/- 符号区才会有红/绿背景
-        theme.gutterBackground
+        // GitHub Desktop 风格：行号区域的背景色跟随行类型变化
+        // added 行的 gutter 也有绿色背景，deleted 行的 gutter 也有红色背景
+        switch line.type {
+        case .added:
+            return theme.addedBackground
+        case .removed:
+            return theme.removedBackground
+        case .modified:
+            return theme.modifiedBackground
+        case .unchanged:
+            return theme.gutterBackground
+        }
     }
 }

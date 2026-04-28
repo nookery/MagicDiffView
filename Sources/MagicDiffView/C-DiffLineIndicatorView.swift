@@ -22,6 +22,21 @@ struct DiffLineIndicatorView: View {
             .font(font)
             .foregroundColor(indicatorColor)
             .frame(width: 20, alignment: .center)
+            .background(indicatorBackgroundColor)
+    }
+
+    /// 指示器区域的背景色，跟随行类型变化（与 GitHub Desktop 一致）
+    private var indicatorBackgroundColor: Color {
+        switch line.type {
+        case .added:
+            return theme.addedBackground
+        case .removed:
+            return theme.removedBackground
+        case .modified:
+            return theme.modifiedBackground
+        case .unchanged:
+            return .clear
+        }
     }
 
     /// 根据行类型返回对应的指示器符号
