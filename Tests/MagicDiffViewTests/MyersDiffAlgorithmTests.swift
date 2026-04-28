@@ -533,6 +533,8 @@ final class MyersDiffAlgorithmTests: XCTestCase {
 
         XCTAssertNotNil(removedLine)
         XCTAssertNotNil(addedLine)
+        XCTAssertFalse(result.contains { $0.content.hasPrefix("diff --git") })
+        XCTAssertFalse(result.contains { $0.content.hasPrefix("index ") })
         XCTAssertEqual(removedLine?.content, "    let name: String")
         XCTAssertEqual(addedLine?.content, "    let name: String?")
     }

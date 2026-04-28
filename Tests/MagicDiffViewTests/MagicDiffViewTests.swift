@@ -23,11 +23,11 @@ diff --git a/test.txt b/test.txt
 
         // Then: 验证初始化成功
         XCTAssertNotNil(view.diffLines)
-        XCTAssertEqual(view.diffLines?.count, 5) // diff header + hunk header + 3 content lines
+        XCTAssertEqual(view.diffLines?.count, 4)
 
-        // 验证第一行是 diff header
+        // 验证第一行是正文内容，而不是 diff 元信息头
         if let firstLine = view.diffLines?.first {
-            XCTAssertEqual(firstLine.content, "diff --git a/test.txt b/test.txt")
+            XCTAssertEqual(firstLine.content, "Line 1")
             XCTAssertEqual(firstLine.type, .unchanged)
         }
 
@@ -85,11 +85,11 @@ diff --git a/test.txt b/test.txt
 
         // Then: 验证 diffLines 被正确解析
         XCTAssertNotNil(diffView.diffLines)
-        XCTAssertEqual(diffView.diffLines?.count, 5) // diff header + hunk header + 3 content lines
+        XCTAssertEqual(diffView.diffLines?.count, 4)
 
-        // 验证第一行是 diff header
+        // 验证第一行是正文内容，而不是 diff 元信息头
         if let firstLine = diffView.diffLines?.first {
-            XCTAssertEqual(firstLine.content, "diff --git a/test.txt b/test.txt")
+            XCTAssertEqual(firstLine.content, "Line 1")
             XCTAssertEqual(firstLine.type, .unchanged)
         }
     }
@@ -111,29 +111,25 @@ diff --git a/test.txt b/test.txt
 
         // Then: 验证 diffLines 内容
         XCTAssertNotNil(view.diffLines)
-        XCTAssertEqual(view.diffLines?.count, 5) // diff header + 4 content lines
+        XCTAssertEqual(view.diffLines?.count, 4)
 
         guard let lines = view.diffLines else { return }
 
-        // 第一行：diff header
-        XCTAssertEqual(lines[0].content, "diff --git a/test.txt b/test.txt")
+        // 第一行：未变更
+        XCTAssertEqual(lines[0].content, "Line 1")
         XCTAssertEqual(lines[0].type, .unchanged)
 
-        // 第二行：未变更
-        XCTAssertEqual(lines[1].content, "Line 1")
-        XCTAssertEqual(lines[1].type, .unchanged)
+        // 第二行：删除
+        XCTAssertEqual(lines[1].content, "Line 2 old")
+        XCTAssertEqual(lines[1].type, .removed)
 
-        // 第三行：删除
-        XCTAssertEqual(lines[2].content, "Line 2 old")
-        XCTAssertEqual(lines[2].type, .removed)
+        // 第三行：添加
+        XCTAssertEqual(lines[2].content, "Line 2 new")
+        XCTAssertEqual(lines[2].type, .added)
 
-        // 第四行：添加
-        XCTAssertEqual(lines[3].content, "Line 2 new")
-        XCTAssertEqual(lines[3].type, .added)
-
-        // 第五行：未变更（Line 3）
-        XCTAssertEqual(lines[4].content, "Line 3")
-        XCTAssertEqual(lines[4].type, .unchanged)
+        // 第四行：未变更（Line 3）
+        XCTAssertEqual(lines[3].content, "Line 3")
+        XCTAssertEqual(lines[3].type, .unchanged)
     }
 
     /// 测试复杂 diff 输出的解析
@@ -185,10 +181,9 @@ index 1234567..abcdef0 100644
 
         // Then: 验证所有内容行都是添加类型
         XCTAssertNotNil(view.diffLines)
-        XCTAssertEqual(view.diffLines?.count, 4) // diff header + 3 added lines
+        XCTAssertEqual(view.diffLines?.count, 3)
 
-        let contentLines = view.diffLines?.dropFirst() ?? [] // 跳过 diff header
-        for line in contentLines {
+        for line in view.diffLines ?? [] {
             XCTAssertEqual(line.type, .added)
         }
     }
@@ -211,10 +206,9 @@ index 1234567..abcdef0 100644
 
         // Then: 验证所有内容行都是删除类型
         XCTAssertNotNil(view.diffLines)
-        XCTAssertEqual(view.diffLines?.count, 4) // diff header + 3 removed lines
+        XCTAssertEqual(view.diffLines?.count, 3)
 
-        let contentLines = view.diffLines?.dropFirst() ?? [] // 跳过 diff header
-        for line in contentLines {
+        for line in view.diffLines ?? [] {
             XCTAssertEqual(line.type, .removed)
         }
     }

@@ -107,8 +107,8 @@ struct MyersDiffAlgorithm {
                 continue
             }
 
-            // 跳过 diff 头部信息（如 ---, +++ ）
-            if line.hasPrefix("---") || line.hasPrefix("+++") || line.isEmpty {
+            // 跳过 Git / unified diff 的元信息头，只保留 hunk 内容。
+            if shouldSkipMetadataLine(line) || line.isEmpty {
                 i += 1
                 continue
             }
@@ -164,6 +164,25 @@ struct MyersDiffAlgorithm {
         }
 
         return result
+    }
+
+    private static func shouldSkipMetadataLine(_ line: String) -> Bool {
+        line.hasPrefix("diff --git ") ||
+        line.hasPrefix("index ") ||
+        line.hasPrefix("new file mode ") ||
+        line.hasPrefix("deleted file mode ") ||
+        line.hasPrefix("old mode ") ||
+        line.hasPrefix("new mode ") ||
+        line.hasPrefix("similarity index ") ||
+        line.hasPrefix("dissimilarity index ") ||
+        line.hasPrefix("rename from ") ||
+        line.hasPrefix("rename to ") ||
+        line.hasPrefix("copy from ") ||
+        line.hasPrefix("copy to ") ||
+        line.hasPrefix("Binary files ") ||
+        line.hasPrefix("GIT binary patch") ||
+        line.hasPrefix("---") ||
+        line.hasPrefix("+++")
     }
 
     /// 解析 unified diff 格式（不抛出异常版本）
